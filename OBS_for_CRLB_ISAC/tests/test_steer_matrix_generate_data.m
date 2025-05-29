@@ -3,8 +3,9 @@
 
 clc; clear;
 
-% Add utils directory to path
-addpath('../../utils');
+% Get the directory where this script is located
+script_path = mfilename('fullpath');
+[script_dir, ~, ~] = fileparts(script_path);
 
 % Test cases with different parameters
 test_cases = struct();
@@ -57,5 +58,6 @@ for case_name = fieldnames(test_cases)'
 end
 
 % Save test data
-save('test_steer_matrix_data.mat', 'test_data');
+output_file = fullfile(script_dir, 'test_steer_matrix_data.mat');
+save(output_file, 'test_data');
 fprintf('Test data saved to test_steer_matrix_data.mat\n');
