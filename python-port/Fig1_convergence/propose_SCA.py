@@ -4,6 +4,11 @@ from scipy.io import savemat
 from scipy.sparse.linalg import eigs
 import matplotlib.pyplot as plt
 from time import perf_counter
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.steering_matrix import construct_steer_matrix_and_derivative_steer_matrix
 
 def square_abs(x):
     """Helper function to compute squared absolute value of complex numbers"""
@@ -12,38 +17,6 @@ def square_abs(x):
 def db2pow(x):
     """Convert dB to power"""
     return 10 ** (x / 10)
-
-def construct_steer_matrix_and_derivative_steer_matrix(theta, phi, Mx, My):
-    """
-    Construct steering matrix and its derivatives for UPA
-
-    Args:
-        theta: Elevation angles (in radians)
-        phi: Azimuth angles (in radians)
-        Mx: Number of elements along x-axis
-        My: Number of elements along y-axis
-    """
-    ix = np.arange(Mx).reshape(-1, 1)
-    iy = np.arange(My).reshape(-1, 1)
-
-    M = len(theta)
-    A = np.zeros((Mx * My, M), dtype=complex)
-    dAtheta = np.zeros((Mx * My, M), dtype=complex)
-    dAphi = np.zeros((Mx * My, M), dtype=complex)
-
-    for m in range(M):
-        ax = 1/np.sqrt(Mx) * np.exp(1j * np.pi * ix * np.sin(theta[m]) * np.sin(phi[m]))
-        ay = 1/np.sqrt(My) * np.exp(1j * np.pi * iy * np.cos(phi[m]))
-
-        daxtheta = 1j * np.pi * ix * np.cos(theta[m]) * np.sin(phi[m]) * ax
-        daxphi = 1j * np.pi * ix * np.sin(theta[m]) * np.cos(phi[m]) * ax
-        dayphi = -1j * np.pi * iy * np.sin(phi[m]) * ay
-
-        A[:, m] = np.kron(ay, ax).flatten()
-        dAtheta[:, m] = np.kron(ay, daxtheta).flatten()
-        dAphi[:, m] = np.kron(ay, daxphi).flatten() + np.kron(dayphi, ax).flatten()
-
-    return A, dAtheta, dAphi
 
 def calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U):
     """Calculate Fisher Information Matrix"""
