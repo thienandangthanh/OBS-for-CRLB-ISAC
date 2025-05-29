@@ -9,6 +9,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.steering_matrix import construct_steer_matrix_and_derivative_steer_matrix
+from utils.calculate_fim import calculateFIM
 
 def square_abs(x):
     """Helper function to compute squared absolute value of complex numbers"""
@@ -17,51 +18,6 @@ def square_abs(x):
 def db2pow(x):
     """Convert dB to power"""
     return 10 ** (x / 10)
-
-def calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U):
-    """Calculate Fisher Information Matrix"""
-    Rx = W @ W.conj().T
-    M = U.shape[0]
-
-    F11 = (U @ A.conj().T @ Rx @ A @ U.conj().T).T * (dBtheta.conj().T @ dBtheta) + \
-        (U @ A.conj().T @ Rx @ dAtheta @ U.conj().T).T * (B.conj().T @ dBtheta) + \
-        (U @ dAtheta.conj().T @ Rx @ A @ U.conj().T).T * (dBtheta.conj().T @ B) + \
-        (U @ dAtheta.conj().T @ Rx @ dAtheta @ U.conj().T).T * (B.conj().T @ B)
-
-    F12 = (U @ A.conj().T @ Rx @ A @ U.conj().T).T * (dBtheta.conj().T @ dBphi) + \
-        (U @ A.conj().T @ Rx @ dAtheta @ U.conj().T).T * (B.conj().T @ dBphi) + \
-        (U @ dAphi.conj().T @ Rx @ A @ U.conj().T).T * (dBtheta.conj().T @ B) + \
-        (U @ dAphi.conj().T @ Rx @ dAtheta @ U.conj().T).T * (B.conj().T @ B)
-
-    F13 = (A.conj().T @ Rx @ A @ U.conj().T).T * (dBtheta.conj().T @ B) + \
-        (A.conj().T @ Rx @ dAtheta @ U.conj().T).T * (B.conj().T @ B)
-
-    F22 = (U @ A.conj().T @ Rx @ A @ U.conj().T).T * (dBphi.conj().T @ dBphi) + \
-        (U @ A.conj().T @ Rx @ dAphi @ U.conj().T).T * (B.conj().T @ dBphi) + \
-        (U @ dAphi.conj().T @ Rx @ A @ U.conj().T).T * (dBphi.conj().T @ B) + \
-        (U @ dAphi.conj().T @ Rx @ dAphi @ U.conj().T).T * (B.conj().T @ B)
-
-    F23 = (A.conj().T @ Rx @ A @ U.conj().T).T * (dBphi.conj().T @ B) + \
-        (A.conj().T @ Rx @ dAphi @ U.conj().T).T * (B.conj().T @ B)
-
-    F33 = (A.conj().T @ Rx @ A).T * (B.conj().T @ B)
-
-    FIM = np.zeros((4*M, 4*M), dtype=complex)
-
-    FIM[:M, :M] = np.real(F11)
-    FIM[:M, M:2*M] = np.real(F12)
-    FIM[:M, 2*M:3*M] = np.real(F13)
-    FIM[:M, 3*M:4*M] = -np.imag(F13)
-    FIM[M:2*M, M:2*M] = np.real(F22)
-    FIM[M:2*M, 2*M:3*M] = np.real(F23)
-    FIM[M:2*M, 3*M:4*M] = -np.imag(F23)
-    FIM[2*M:3*M, 2*M:3*M] = np.real(F33)
-    FIM[2*M:3*M, 3*M:4*M] = -np.imag(F33)
-    FIM[3*M:4*M, 3*M:4*M] = np.real(F33)
-
-    FIM = np.triu(FIM) + np.triu(FIM).conj().T - np.diag(np.diag(FIM))
-
-    return 2 * L / noise_s * FIM
 
 def construct_matrixQ(L, noise_s, Phi, A, dAtheta, dAphi, B, dBtheta, dBphi, U):
     """Construct matrix Q for optimization"""

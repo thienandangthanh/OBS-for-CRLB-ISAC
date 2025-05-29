@@ -11,8 +11,15 @@ from .steering_matrix import (
     validate_steering_matrix_inputs
 )
 
+from .calculate_fim import (
+    calculate_fim,
+    calculateFIM
+)
+
 __all__ = [
     'construct_steer_matrix_and_derivative_steer_matrix',
     'construct_steer_matrix_and_derivative_steer_matrix_validated', 
-    'validate_steering_matrix_inputs'
+    'validate_steering_matrix_inputs',
+    'calculate_fim',
+    'calculateFIM'
 ]
