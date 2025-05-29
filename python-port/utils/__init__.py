@@ -16,10 +16,15 @@ from .calculate_fim import (
     calculateFIM
 )
 
+from .construct_matrixQ import (
+    construct_matrixQ
+)
+
 __all__ = [
     'construct_steer_matrix_and_derivative_steer_matrix',
     'construct_steer_matrix_and_derivative_steer_matrix_validated', 
     'validate_steering_matrix_inputs',
     'calculate_fim',
-    'calculateFIM'
+    'calculateFIM',
+    'construct_matrixQ'
 ]

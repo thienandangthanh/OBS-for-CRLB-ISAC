@@ -10,6 +10,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.steering_matrix import construct_steer_matrix_and_derivative_steer_matrix
 from utils.calculate_fim import calculateFIM
+from utils.construct_matrixQ import construct_matrixQ
 
 def square_abs(x):
     """Helper function to compute squared absolute value of complex numbers"""
@@ -18,46 +19,6 @@ def square_abs(x):
 def db2pow(x):
     """Convert dB to power"""
     return 10 ** (x / 10)
-
-def construct_matrixQ(L, noise_s, Phi, A, dAtheta, dAphi, B, dBtheta, dBphi, U):
-    """Construct matrix Q for optimization"""
-    M = U.shape[0]
-
-    phi11 = Phi[:M, :M]
-    phi12 = Phi[:M, M:2*M]
-    phi13 = Phi[:M, 2*M:3*M]
-    phi14 = Phi[:M, 3*M:4*M]
-    phi22 = Phi[M:2*M, M:2*M]
-    phi23 = Phi[M:2*M, 2*M:3*M]
-    phi24 = Phi[M:2*M, 3*M:4*M]
-    phi33 = Phi[2*M:3*M, 2*M:3*M]
-    phi34 = Phi[2*M:3*M, 3*M:4*M]
-    phi44 = Phi[3*M:4*M, 3*M:4*M]
-
-    Q11 = (A @ U.conj().T @ (phi11 * (dBtheta.conj().T @ dBtheta)) @ U @ A.conj().T) + \
-        (dAtheta @ U.conj().T @ (phi11 * (B.conj().T @ dBtheta)) @ U @ A.conj().T) + \
-        (A @ U.conj().T @ (phi11 * (dBtheta.conj().T @ B)) @ U @ dAtheta.conj().T) + \
-        (dAtheta @ U.conj().T @ (phi11 * (B.conj().T @ B)) @ U @ dAtheta.conj().T)
-
-    Q12 = (A @ U.conj().T @ (2*phi12 * (dBtheta.conj().T @ dBphi)) @ U @ A.conj().T) + \
-        (dAtheta @ U.conj().T @ (2*phi12 * (B.conj().T @ dBphi)) @ U @ A.conj().T) + \
-        (A @ U.conj().T @ (2*phi12 * (dBtheta.conj().T @ B)) @ U @ dAphi.conj().T) + \
-        (dAtheta @ U.conj().T @ (2*phi12 * (B.conj().T @ B)) @ U @ dAphi.conj().T)
-
-    Q13 = (A @ U.conj().T @ ((2*phi13+2j*phi14) * (dBtheta.conj().T @ B)) @ A.conj().T) + \
-        (dAtheta @ U.conj().T @ ((2*phi13+2j*phi14) * (B.conj().T @ B)) @ A.conj().T)
-
-    Q22 = (A @ U.conj().T @ (phi22 * (dBphi.conj().T @ dBphi)) @ U @ A.conj().T) + \
-        (dAphi @ U.conj().T @ (phi22 * (B.conj().T @ dBphi)) @ U @ A.conj().T) + \
-        (A @ U.conj().T @ (phi22 * (dBphi.conj().T @ B)) @ U @ dAphi.conj().T) + \
-        (dAphi @ U.conj().T @ (phi22 * (B.conj().T @ B)) @ U @ dAphi.conj().T)
-
-    Q23 = (A @ U.conj().T @ ((2*phi23+2j*phi24) * (dBphi.conj().T @ B)) @ A.conj().T) + \
-        (dAphi @ U.conj().T @ ((2*phi23+2j*phi24) * (B.conj().T @ B)) @ A.conj().T)
-
-    Q33 = (A @ ((phi33+phi44+2j*phi34) * (B.conj().T @ B)) @ A.conj().T)
-
-    return 2 * L / noise_s * (Q11 + Q12 + Q13 + Q22 + Q23 + Q33)
 
 # Not used
 def initial_Ws(L, noise_s, Nt, num_sensing_streams, A, dAtheta, dAphi, B, dBtheta, dBphi, U):
