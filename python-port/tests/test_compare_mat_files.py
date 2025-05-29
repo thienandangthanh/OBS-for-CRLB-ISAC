@@ -7,10 +7,28 @@ Demonstrates that metadata differences don't affect data comparison results
 import os
 import sys
 import subprocess
+import pytest
+from pathlib import Path
 
 # Add parent directory to path to import compare_mat_files
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'helpers'))
 from compare_mat_files import compare_mat_files
+
+# Define project paths
+PROJECT_ROOT = Path(__file__).parent.parent
+TESTS_DIR = PROJECT_ROOT / 'tests'
+FIG1_DIR = PROJECT_ROOT / 'Fig1_convergence'
+
+@pytest.fixture(autouse=True)
+def cleanup():
+    """Cleanup fixture that runs after each test"""
+    # This code runs before each test
+    yield
+    # This code runs after each test
+    test_file = TESTS_DIR / 'mod_data_convergence.mat'
+    if test_file.exists():
+        test_file.unlink()
+        print(f"\nCleaned up: {test_file}")
 
 def test_metadata_differences():
     """
@@ -21,42 +39,40 @@ def test_metadata_differences():
 
     # Step 1: Generate modified metadata file
     print("Step 1: Generating modified metadata file...")
-    mod_script_path = os.path.join(os.path.dirname(__file__), 'mod-mat-metadata.py')
+    mod_script_path = TESTS_DIR / 'mod-mat-metadata.py'
 
     # Define input and output file paths
-    original_file = os.path.join(os.path.dirname(__file__), '..', 'Fig1_convergence', 'data_convergence.mat')
-    modified_file = os.path.join(os.path.dirname(__file__), 'mod_data_convergence.mat')
+    original_file = FIG1_DIR / 'data_convergence.mat'
+    modified_file = TESTS_DIR / 'mod_data_convergence.mat'
 
     # Check if original file exists before proceeding
-    if not os.path.exists(original_file):
-        print(f"Error: Original file not found: {original_file}")
-        return False
+    if not original_file.exists():
+        pytest.fail(f"Error: Original file not found: {original_file}")
 
     try:
         # Run the mod-mat-metadata.py script with input and output arguments
-        result = subprocess.run([sys.executable, mod_script_path, original_file, modified_file], 
-                              capture_output=True, text=True, cwd=os.path.dirname(mod_script_path))
+        result = subprocess.run([sys.executable, str(mod_script_path), 
+                               str(original_file), str(modified_file)], 
+                              capture_output=True, text=True, 
+                              cwd=str(TESTS_DIR))
         if result.returncode != 0:
-            print(f"Error running mod-mat-metadata.py: {result.stderr}")
-            return False
+            pytest.fail(f"Error running mod-mat-metadata.py: {result.stderr}")
         print("✓ Modified metadata file generated successfully")
         print(result.stdout)
     except Exception as e:
-        print(f"Error running mod-mat-metadata.py: {e}")
-        return False
+        pytest.fail(f"Error running mod-mat-metadata.py: {e}")
 
     # Step 2: Compare original and modified files
     print("\nStep 2: Comparing original and modified files...")
 
-    if not os.path.exists(modified_file):
-        print(f"Error: Modified file not found: {modified_file}")
-        return False
+    if not modified_file.exists():
+        pytest.fail(f"Error: Modified file not found: {modified_file}")
 
     try:
         # Run comparison with verbose output
         summary = compare_mat_files(
-            original_file,
-            modified_file,
+            str(original_file),
+            str(modified_file),
             tolerance_abs=1e-12,
             tolerance_rel=1e-9,
             verbose=True
@@ -79,42 +95,18 @@ def test_metadata_differences():
                 print("✅ TEST PASSED: Data is identical despite metadata differences")
                 print("   This confirms that compare_mat_files.py correctly separates")
                 print("   metadata differences from data differences.")
-                return True
+                assert True
             elif data_failed == 0 and metadata_different == 0:
                 print("⚠️  WARNING: No metadata differences detected")
                 print("   The modified file may be identical to the original")
-                return True
+                assert True
             else:
-                print("❌ TEST FAILED: Data comparison failed unexpectedly")
-                return False
+                pytest.fail("❌ TEST FAILED: Data comparison failed unexpectedly")
         else:
-            print("❌ TEST FAILED: File comparison failed")
-            return False
+            pytest.fail("❌ TEST FAILED: File comparison failed")
 
     except Exception as e:
-        print(f"Error during comparison: {e}")
-        return False
-
-def cleanup():
-    """Clean up generated test files"""
-    test_file = os.path.join(os.path.dirname(__file__), 'mod_data_convergence.mat')
-    if os.path.exists(test_file):
-        os.remove(test_file)
-        print(f"Cleaned up: {test_file}")
+        pytest.fail(f"Error during comparison: {e}")
 
 if __name__ == "__main__":
-    try:
-        success = test_metadata_differences()
-
-        if success:
-            print("\n🎉 All tests passed!")
-        else:
-            print("\n❌ Tests failed!")
-            sys.exit(1)
-
-    except KeyboardInterrupt:
-        print("\nTest interrupted by user")
-    finally:
-        # Always clean up
-        print("\nCleaning up...")
-        cleanup()
+    pytest.main([__file__])
