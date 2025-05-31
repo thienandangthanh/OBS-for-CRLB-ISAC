@@ -1,0 +1,518 @@
+Comparing .mat files:
+  Reference: OBS_for_CRLB_ISAC/Fig_4performance_vs_Nt/data_FP_SGDA.mat
+  Comparison: OBS_for_CRLB_ISAC/Fig_4performance_vs_Nt/data_FP_SGDA-rerun.mat
+  Absolute tolerance: 1.00e-12
+  Relative tolerance: 1.00e-09
+================================================================================
+
+METADATA COMPARISON
+================================================================================
+__globals__: ✓ MATCH
+  File 1: []
+  File 2: []
+__header__: ✗ DIFFER
+  File 1: b'MATLAB 5.0 MAT-file, Platform: PCWIN64, Created on: Thu Jan 30 18:27:23 2025'
+  File 2: b'MATLAB 5.0 MAT-file, Platform: GLNXA64, Created on: Fri May 30 12:35:00 2025'
+__version__: ✓ MATCH
+  File 1: 1.0
+  File 2: 1.0
+
+Metadata Summary:
+  Total metadata fields: 3
+  Matching fields: 2
+  Different fields: 1
+  Match rate: 66.7%
+
+⚠️  1 metadata field(s) differ between files.
+This is often expected when comparing MATLAB vs Python generated files.
+================================================================================
+
+DATA COMPARISON
+================================================================================
+Variables in reference file: 67
+Variables in comparison file: 67
+Common variables: 67
+
+Comparing variable: A
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: B
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: C1
+  ✓ PASS
+    Max absolute error: 2.70e-12
+    Mean absolute error: 1.01e-14
+    Max relative error: 7.60e-15
+    Mean relative error: 4.93e-15
+
+Comparing variable: C2
+  ✓ PASS
+    Max absolute error: 9.09e-13
+    Mean absolute error: 9.34e-14
+    Max relative error: 2.31e-14
+    Mean relative error: 2.96e-16
+
+Comparing variable: CRB
+  ✓ PASS
+    Max absolute error: 1.67e-15
+    Mean absolute error: 3.89e-17
+    Max relative error: 3.81e-13
+    Mean relative error: 5.41e-14
+
+Comparing variable: CRBM
+  ✓ PASS
+    Max absolute error: 2.33e-15
+    Mean absolute error: 7.03e-17
+    Max relative error: 1.29e-12
+    Mean relative error: 8.37e-14
+
+Comparing variable: CRB_all
+  ✓ PASS
+    Max absolute error: 3.42e-14
+    Mean absolute error: 2.89e-15
+    Max relative error: 1.45e-14
+    Mean relative error: 1.92e-15
+
+Comparing variable: Con
+  ✓ PASS
+    Max absolute error: 4.26e-14
+    Mean absolute error: 3.08e-15
+    Max relative error: 1.93e-14
+    Mean relative error: 1.22e-15
+
+Comparing variable: FIM
+  ✓ PASS
+    Max absolute error: 3.18e-12
+    Mean absolute error: 1.11e-13
+    Max relative error: 1.64e-12
+    Mean relative error: 1.19e-13
+
+Comparing variable: H
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: H_all
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: I_in
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: I_out
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: K
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: L
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: M
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Nr
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Nrh
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Nrv
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Nt
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Nth
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Ntv
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Obj_all
+  ✓ PASS
+    Max absolute error: 2.81e-13
+    Mean absolute error: 3.05e-14
+    Max relative error: 9.56e-12
+    Mean relative error: 5.44e-14
+
+Comparing variable: Pt
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Q
+  ✓ PASS
+    Max absolute error: 6.33e-14
+    Mean absolute error: 7.68e-15
+    Max relative error: 5.11e-12
+    Mean relative error: 2.28e-14
+
+Comparing variable: Rx
+  ✓ PASS
+    Max absolute error: 6.17e-19
+    Mean absolute error: 8.27e-20
+    Max relative error: 2.59e-11
+    Mean relative error: 9.16e-15
+
+Comparing variable: SR
+  ✓ PASS
+    Max absolute error: 2.20e-13
+    Mean absolute error: 2.20e-13
+    Max relative error: 9.38e-15
+    Mean relative error: 9.38e-15
+
+Comparing variable: SR_all
+  ✓ PASS
+    Max absolute error: 1.11e-12
+    Mean absolute error: 1.14e-13
+    Max relative error: 4.77e-14
+    Mean relative error: 5.21e-15
+
+Comparing variable: Sigma1
+  ✓ PASS
+    Max absolute error: 4.55e-12
+    Mean absolute error: 7.85e-13
+    Max relative error: 7.42e-15
+    Mean relative error: 5.26e-15
+
+Comparing variable: Sigma2
+  ✓ PASS
+    Max absolute error: 3.41e-13
+    Mean absolute error: 4.26e-14
+    Max relative error: 3.42e-16
+    Mean relative error: 1.71e-16
+
+Comparing variable: T_k
+  ✓ PASS
+    Max absolute error: 4.11e-15
+    Mean absolute error: 2.40e-15
+    Max relative error: 1.19e-14
+    Mean relative error: 6.86e-15
+
+Comparing variable: Time_all
+  ✗ FAIL
+    Max absolute error: 5.31e+02
+    Mean absolute error: 2.40e+01
+    Max relative error: 9.81e-01
+    Mean relative error: 8.11e-01
+    Absolute tolerance: 1.00e-12
+    Relative tolerance: 1.00e-09
+    Absolute test: FAIL
+    Relative test: FAIL
+
+Comparing variable: U
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: W
+  ✓ PASS
+    Max absolute error: 5.81e-17
+    Mean absolute error: 9.58e-19
+    Max relative error: 1.56e-12
+    Mean relative error: 5.32e-15
+
+Comparing variable: W_hat
+  ✓ PASS
+    Max absolute error: 5.55e-17
+    Mean absolute error: 9.40e-19
+    Max relative error: 4.85e-13
+    Mean relative error: 5.26e-15
+
+Comparing variable: W_last
+  ✓ PASS
+    Max absolute error: 5.85e-17
+    Mean absolute error: 9.55e-19
+    Max relative error: 1.50e-12
+    Mean relative error: 5.32e-15
+
+Comparing variable: Wc
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Ws
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: Y
+  ✓ PASS
+    Max absolute error: nan
+    Mean absolute error: nan
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: alpha
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: alpha_k
+  ✓ PASS
+    Max absolute error: 4.32e-12
+    Mean absolute error: 2.39e-12
+    Max relative error: 1.25e-14
+    Mean relative error: 6.85e-15
+
+Comparing variable: beta_k
+  ✓ PASS
+    Max absolute error: 2.08e-13
+    Mean absolute error: 1.02e-13
+    Max relative error: 6.58e-15
+    Mean relative error: 3.24e-15
+
+Comparing variable: channel
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: count
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: dAphi
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: dAtheta
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: dBphi
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: dBtheta
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: delta_c
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: delta_s
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: gamma_W
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: gamma_W_hat
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: gamma_Y
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: gradient_W
+  ✓ PASS
+    Max absolute error: 5.68e-13
+    Mean absolute error: 3.40e-15
+    Max relative error: 3.23e-11
+    Mean relative error: 3.69e-14
+
+Comparing variable: gradient_Y
+  ✓ PASS
+    Max absolute error: nan
+    Mean absolute error: nan
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: k_par
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: kappa
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: noise_c
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: noise_s
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: num_sensing_streams
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: obj
+  ✓ PASS
+    Max absolute error: 1.78e-15
+    Mean absolute error: 1.78e-15
+    Max relative error: 3.52e-16
+    Mean relative error: 3.52e-16
+
+Comparing variable: p_W
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: phi
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: rate_p
+  ✓ PASS
+    Max absolute error: 1.15e-14
+    Mean absolute error: 6.44e-15
+    Max relative error: 1.97e-15
+    Mean relative error: 1.10e-15
+
+Comparing variable: theta
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: tolerance
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+Comparing variable: weight
+  ✓ PASS
+    Max absolute error: 0.00e+00
+    Mean absolute error: 0.00e+00
+    Max relative error: 0.00e+00
+    Mean relative error: 0.00e+00
+
+================================================================================
+OVERALL COMPARISON SUMMARY
+================================================================================
+Total variables compared: 67
+Total comparisons performed: 67
+Passed: 66
+Failed: 1
+Success rate: 98.5%
+
+⚠️  1 comparison(s) FAILED. Check details above.
