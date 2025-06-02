@@ -20,11 +20,18 @@ from .construct_matrixQ import (
     construct_matrixQ
 )
 
+from .simulation_config import (
+    SimulationConfig,
+    db2pow
+)
+
 __all__ = [
     'construct_steer_matrix_and_derivative_steer_matrix',
     'construct_steer_matrix_and_derivative_steer_matrix_validated', 
     'validate_steering_matrix_inputs',
     'calculate_fim',
     'calculateFIM',
-    'construct_matrixQ'
+    'construct_matrixQ',
+    'SimulationConfig',
+    'db2pow'
 ]
