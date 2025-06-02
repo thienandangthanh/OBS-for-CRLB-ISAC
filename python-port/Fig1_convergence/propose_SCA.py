@@ -11,14 +11,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.steering_matrix import construct_steer_matrix_and_derivative_steer_matrix
 from utils.calculate_fim import calculateFIM
 from utils.construct_matrixQ import construct_matrixQ
+from utils.db2pow import db2pow
 
 def square_abs(x):
     """Helper function to compute squared absolute value of complex numbers"""
     return np.abs(x) ** 2
-
-def db2pow(x):
-    """Convert dB to power"""
-    return 10 ** (x / 10)
 
 # Not used
 def initial_Ws(L, noise_s, Nt, num_sensing_streams, A, dAtheta, dAphi, B, dBtheta, dBphi, U):

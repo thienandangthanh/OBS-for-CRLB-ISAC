@@ -19,11 +19,7 @@ import numpy as np
 from dataclasses import dataclass, field
 from typing import Optional, List, Tuple
 import math
-
-
-def db2pow(db_val: float) -> float:
-    """Convert dB value to power (linear scale)"""
-    return 10**(db_val / 10)
+from utils.db2pow import db2pow
 
 
 @dataclass
