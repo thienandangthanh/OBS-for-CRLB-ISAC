@@ -50,6 +50,10 @@ python3 -m venv venv
 ```bash
 source venv/bin/activate
 ```
+With fish shell, use this instead
+```fish
+source venv/bin/activate.fish
+```
 
 **On Windows:**
 ```bash
