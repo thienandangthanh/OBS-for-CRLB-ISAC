@@ -28,6 +28,10 @@ from .db2pow import (
     db2pow
 )
 
+from .square_abs import (
+    square_abs
+)
+
 __all__ = [
     'construct_steer_matrix_and_derivative_steer_matrix',
     'construct_steer_matrix_and_derivative_steer_matrix_validated', 
