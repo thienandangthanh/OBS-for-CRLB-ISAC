@@ -3,225 +3,205 @@
 Monte Carlo Verification of propose_SCA Algorithm
 
 This script runs the propose_SCA algorithm multiple times with different random
-initializations (no seeds) and averages the results to verify statistical
-convergence behavior and algorithm correctness.
+initializations and averages the results to verify statistical convergence 
+behavior and algorithm correctness.
 """
 
 import numpy as np
-from scipy import linalg
-from scipy.io import savemat
-from scipy.sparse.linalg import eigs
 import matplotlib.pyplot as plt
 from time import perf_counter
 import os
 import sys
+import subprocess
+import tempfile
+import argparse
 from tqdm import tqdm
+from scipy.io import loadmat, savemat
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.steering_matrix import construct_steer_matrix_and_derivative_steer_matrix
-from utils.calculate_fim import calculateFIM
-from utils.construct_matrixQ import construct_matrixQ
-from utils.db2pow import db2pow
-from utils.square_abs import square_abs
+from utils.simulation_config import SimulationConfig
 
-def run_single_simulation(simulation_id=None):
+def run_single_simulation(config, run_id=None, temp_dir=None):
     """
     Run a single instance of the propose_SCA algorithm with random initialization.
-    Returns convergence data for this run.
+    Returns convergence data for this run by calling propose_SCA.py as subprocess.
     """
-    # Initialize parameters (same as original)
-    Nth = 4
-    Ntv = 4
-    Nt = Nth * Ntv
+    if temp_dir is None:
+        temp_dir = tempfile.mkdtemp()
 
-    Nrh = 5
-    Nrv = 4
-    Nr = Nrh * Nrv
+    # Create unique output directory for this run
+    run_output_dir = os.path.join(temp_dir, f"run_{run_id}")
+    os.makedirs(run_output_dir, exist_ok=True)
 
-    K = 4
-    M = 2
+    # Build command to run propose_SCA.py
+    # Use different random seed for each run to ensure randomness
+    random_seed = np.random.randint(0, 1000000) if run_id is None else run_id * 12345
 
-    # NO SEEDS - completely random initialization each time
-    theta = -np.pi/3 + 2*np.pi/3 * np.random.rand(M)
-    phi = -np.pi/3 + 2*np.pi/3 * np.random.rand(M)
+    cmd = [
+        'python', 'propose_SCA.py',
+        '--save-plots',
+        '--output-dir', run_output_dir,
+        '--random-seed', str(random_seed),
+        '--max-iterations', str(config.max_iterations),
+        '--tolerance', str(config.tolerance),
+        '--nth', str(config.Nth),
+        '--ntv', str(config.Ntv),
+        '--nrh', str(config.Nrh),
+        '--nrv', str(config.Nrv),
+        '--k', str(config.K),
+        '--m', str(config.M),
+        '--pt-dbm', str(config.Pt_dBm),
+        '--noise-c-dbm', str(config.noise_c_dBm),
+        '--noise-s-dbm', str(config.noise_s_dBm),
+        '--l', str(config.L),
+        '--delta-s', str(config.delta_s),
+        '--alpha-base', str(config.alpha_base),
+        '--alpha-variance', str(config.alpha_variance)
+    ]
 
-    num_sensing_streams = Nt
-    tolerance = 1e-5
-    max_iterations = 2000
+    try:
+        # Run propose_SCA.py
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.path.dirname(__file__))
 
-    # Store results for all delta_c values
-    results = {'lin_values': [], 'convergence_data': []}
-    
-    for de in range(3):
-        lin = [0.05, 0.1, 0.15]
-        delta_s = 1
-        delta_c = lin[de]
-        
-        Pt = db2pow(10-30)  # dBm
-        noise_c = db2pow(0-30)  # dBm
-        noise_s = db2pow(0-30)  # dBm
+        if result.returncode != 0:
+            raise RuntimeError(f"propose_SCA.py failed: {result.stderr}")
 
-        # Random channel realization (no seed)
-        alpha = 0.1 * (1 + 0.2 * np.random.randn(M)) * np.exp(1j * 2 * np.pi * np.random.rand(M))
-        L = 30
-        H = 1/np.sqrt(2) * (np.random.randn(Nt, K) + 1j * np.random.randn(Nt, K))
+        # Load the generated data
+        data_file = os.path.join(run_output_dir, 'data_convergence.mat')
+        if not os.path.exists(data_file):
+            raise FileNotFoundError(f"Expected output file not found: {data_file}")
 
-        # Generate steering matrices
-        A, dAtheta, dAphi = construct_steer_matrix_and_derivative_steer_matrix(theta, phi, Nth, Ntv)
-        B, dBtheta, dBphi = construct_steer_matrix_and_derivative_steer_matrix(theta, phi, Nrh, Nrv)
-        U = np.diag(alpha)
+        data = loadmat(data_file)
+        Con = data['Con']
 
-        # Random initial beamforming matrices (no seed)
-        Wc = np.random.randn(Nt, K) + 1j * np.random.randn(Nt, K)
-        Ws = np.random.randn(Nt, num_sensing_streams) + 1j * np.random.randn(Nt, num_sensing_streams)
-        W = np.hstack([Wc, Ws])
-        W = W * np.sqrt(Pt / np.trace(W @ W.conj().T))
+        # Extract convergence data for all three lin values
+        results = {'lin_values': config.convergence_lin_values, 'convergence_data': []}
 
-        FIM = calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
-        W_last = W.copy()
+        Con_flat = Con.flatten()
+        for de in range(3):
+            if de < len(Con_flat):
+                # Extract the convergence history for this lin value
+                convergence_history = Con_flat[de].tolist()
+                results['convergence_data'].append(convergence_history)
+            else:
+                results['convergence_data'].append([])
 
-        # Track convergence for this run
-        convergence_history = []
-        
-        for count in range(max_iterations):
-            T_k = np.sum(square_abs(H.conj().T @ W[:, :K]), axis=1) + noise_c * np.ones(K)
-            alpha_k = T_k / (T_k - square_abs(np.diag(H.conj().T @ W[:, :K]))) - 1
-            beta_k = np.sqrt(1 + alpha_k) * np.diag(H.conj().T @ W[:, :K]) / T_k
+        return results
 
-            Sigma1 = np.diag(np.sqrt(1 + alpha_k) * beta_k)
-            Sigma2 = np.diag(square_abs(beta_k))
+    except Exception as e:
+        print(f"Warning: Run {run_id} failed: {e}")
+        raise
 
-            CRBM = np.linalg.inv(FIM)
-            Q = construct_matrixQ(L, noise_s, CRBM @ CRBM, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
-
-            C1 = np.hstack([delta_c * H @ Sigma1, np.zeros((Nt, num_sensing_streams), dtype=complex)])
-            C2 = -0.5 * delta_s * (Q + Q.conj().T) + delta_c * H @ Sigma2 @ H.conj().T
-
-            mu = np.abs(eigs(C2, k=1, which='LM', return_eigenvectors=False)[0])
-            C2 = mu * np.eye(Nt) - C2
-
-            W = C1 + C2 @ W
-            W = W * np.sqrt(Pt / np.trace(W @ W.conj().T))
-
-            FIM = calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
-
-            T_k = np.sum(square_abs(H.conj().T @ W), axis=1) + noise_c * np.ones(K)
-            obj = delta_c * np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W))))) - \
-                delta_s * np.trace(np.linalg.inv(FIM))
-
-            # Store convergence data
-            convergence_history.append([
-                np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W))))),
-                -np.trace(np.linalg.inv(FIM)),
-                obj
-            ])
-
-            # Check convergence
-            norm_diff = np.linalg.norm(W - W_last)
-            if norm_diff < tolerance:
-                break
-            W_last = W.copy()
-
-        results['lin_values'].append(delta_c)
-        results['convergence_data'].append(convergence_history)
-    
-    return results
-
-def monte_carlo_verification(num_runs=300, save_individual=False):
+def monte_carlo_verification(config, num_runs=300, save_individual=False, temp_dir=None):
     """
     Run Monte Carlo verification with multiple independent runs.
-    
+
     Parameters:
     -----------
+    config : SimulationConfig
+        Configuration object
     num_runs : int
         Number of Monte Carlo runs
     save_individual : bool
         Whether to save individual run data
+    temp_dir : str
+        Temporary directory for intermediate files
     """
-    
+
     print(f"=== MONTE CARLO VERIFICATION OF PROPOSE_SCA ===")
     print(f"Running {num_runs} independent simulations...")
-    print("Each run uses completely random initialization (no seeds)")
+    print("Each run uses different random seed for initialization")
     print()
-    
+    print("Configuration:")
+    print(config)
+    print()
+
+    if temp_dir is None:
+        temp_dir = tempfile.mkdtemp()
+
     # Storage for all runs
     all_runs_data = []
     failed_runs = 0
-    
+
     start_time = perf_counter()
-    
+
     # Run Monte Carlo simulations with progress bar
     for run_id in tqdm(range(num_runs), desc="Monte Carlo Runs"):
         try:
-            run_data = run_single_simulation(run_id)
+            run_data = run_single_simulation(config, run_id, temp_dir)
             all_runs_data.append(run_data)
         except Exception as e:
-            print(f"Warning: Run {run_id} failed: {e}")
+            if config.max_iterations < 100:  # Only show warnings for quick runs
+                print(f"Warning: Run {run_id} failed: {e}")
             failed_runs += 1
-    
+
     successful_runs = len(all_runs_data)
     total_time = perf_counter() - start_time
-    
+
     print(f"\nCompleted {successful_runs}/{num_runs} runs successfully")
     print(f"Failed runs: {failed_runs}")
     print(f"Total time: {total_time:.2f} seconds")
     print(f"Average time per run: {total_time/num_runs:.3f} seconds")
-    
+
     if successful_runs == 0:
         print("ERROR: No successful runs completed!")
         return None
-    
+
     # Analyze results
     print("\n=== ANALYZING MONTE CARLO RESULTS ===")
-    
+
     # Find maximum length for padding
     max_lengths = [0, 0, 0]  # for each lin value
     for run_data in all_runs_data:
         for de in range(3):
             if de < len(run_data['convergence_data']):
                 max_lengths[de] = max(max_lengths[de], len(run_data['convergence_data'][de]))
-    
+
     print(f"Maximum iterations observed: {max(max_lengths)}")
-    
+
     # Compute statistics
     statistics = {}
-    
+    lin_vals = config.convergence_lin_values
+
     for de in range(3):
-        lin_val = [0.05, 0.1, 0.15][de]
+        lin_val = lin_vals[de]
         max_len = max_lengths[de]
-        
+
         # Storage for padded data
         all_sum_rates = []
         all_crb_traces = []
         all_objectives = []
         final_values = {'sum_rate': [], 'crb_trace': [], 'objective': []}
         convergence_iterations = []
-        
+
         for run_data in all_runs_data:
             if de < len(run_data['convergence_data']):
                 history = run_data['convergence_data'][de]
                 convergence_iterations.append(len(history))
-                
+
+                # Convert to numpy array
+                history = np.array(history)
+
                 # Pad with final values if needed
                 if len(history) < max_len:
-                    final_val = history[-1] if history else [0, 0, 0]
-                    history = history + [final_val] * (max_len - len(history))
-                
-                history = np.array(history)
+                    final_val = history[-1] if len(history) > 0 else [0, 0, 0]
+                    padding = np.tile(final_val, (max_len - len(history), 1))
+                    history = np.vstack([history, padding])
+
                 all_sum_rates.append(history[:, 0])
                 all_crb_traces.append(history[:, 1])
                 all_objectives.append(history[:, 2])
-                
+
                 # Store final values
                 final_values['sum_rate'].append(history[-1, 0])
                 final_values['crb_trace'].append(history[-1, 1])
                 final_values['objective'].append(history[-1, 2])
-        
+
         # Convert to arrays
         all_sum_rates = np.array(all_sum_rates)
         all_crb_traces = np.array(all_crb_traces)
         all_objectives = np.array(all_objectives)
-        
+
         # Compute statistics
         mean_sum_rate = np.mean(all_sum_rates, axis=0)
         std_sum_rate = np.std(all_sum_rates, axis=0)
@@ -229,7 +209,7 @@ def monte_carlo_verification(num_runs=300, save_individual=False):
         std_crb_trace = np.std(all_crb_traces, axis=0)
         mean_objective = np.mean(all_objectives, axis=0)
         std_objective = np.std(all_objectives, axis=0)
-        
+
         statistics[f'lin_{lin_val}'] = {
             'mean_sum_rate': mean_sum_rate,
             'std_sum_rate': std_sum_rate,
@@ -241,184 +221,236 @@ def monte_carlo_verification(num_runs=300, save_individual=False):
             'convergence_iterations': convergence_iterations,
             'max_iterations': max_len
         }
-        
+
         # Print summary statistics
         print(f"\nδc = {lin_val} (lin[{de}]):")
         print(f"  Average convergence iterations: {np.mean(convergence_iterations):.1f} ± {np.std(convergence_iterations):.1f}")
         print(f"  Final sum rate: {np.mean(final_values['sum_rate']):.4f} ± {np.std(final_values['sum_rate']):.4f}")
         print(f"  Final CRB trace: {np.mean(final_values['crb_trace']):.4f} ± {np.std(final_values['crb_trace']):.4f}")
         print(f"  Final objective: {np.mean(final_values['objective']):.4f} ± {np.std(final_values['objective']):.4f}")
-    
-    # Plot results
-    plot_monte_carlo_results(statistics, num_runs)
-    
-    # Save results
-    save_monte_carlo_results(statistics, all_runs_data, num_runs, save_individual)
-    
-    return statistics
 
-def plot_monte_carlo_results(statistics, num_runs):
+    return statistics, all_runs_data
+
+def plot_monte_carlo_results(statistics, config, num_runs, output_dir='.'):
     """Plot Monte Carlo averaged results"""
-    
+
     plt.style.use('default')
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     fig.suptitle(f'Monte Carlo Averaged Convergence (N={num_runs} runs)', fontsize=14)
-    
+
     colors = ['b-', 'r-', 'g-']
-    labels = ['δc = 0.05', 'δc = 0.10', 'δc = 0.15']
-    
-    for i, (lin_val, color, label) in enumerate(zip([0.05, 0.1, 0.15], colors, labels)):
+    lin_vals = config.convergence_lin_values
+    labels = [f'δc = {val}' for val in lin_vals]
+
+    for i, (lin_val, color, label) in enumerate(zip(lin_vals, colors, labels)):
         key = f'lin_{lin_val}'
+        if key not in statistics:
+            continue
+
         data = statistics[key]
-        
         iterations = range(len(data['mean_sum_rate']))
-        
+
         # Plot 1: Sum Rate (take real part)
         mean_sum_rate = np.real(data['mean_sum_rate'])
         std_sum_rate = np.real(data['std_sum_rate'])
         axes[0].plot(iterations, mean_sum_rate, color, label=label, linewidth=2)
         axes[0].fill_between(iterations, 
-                           mean_sum_rate - std_sum_rate,
-                           mean_sum_rate + std_sum_rate,
-                           alpha=0.3, color=color[0])
-        
+                             mean_sum_rate - std_sum_rate,
+                             mean_sum_rate + std_sum_rate,
+                             alpha=0.3, color=color[0])
+
         # Plot 2: CRB Trace (take real part)
         mean_crb_trace = np.real(data['mean_crb_trace'])
         std_crb_trace = np.real(data['std_crb_trace'])
         axes[1].plot(iterations, mean_crb_trace, color, label=label, linewidth=2)
         axes[1].fill_between(iterations,
-                           mean_crb_trace - std_crb_trace,
-                           mean_crb_trace + std_crb_trace,
-                           alpha=0.3, color=color[0])
-        
+                             mean_crb_trace - std_crb_trace,
+                             mean_crb_trace + std_crb_trace,
+                             alpha=0.3, color=color[0])
+
         # Plot 3: Objective (take real part)
         mean_objective = np.real(data['mean_objective'])
         std_objective = np.real(data['std_objective'])
         axes[2].plot(iterations, mean_objective, color, label=label, linewidth=2)
         axes[2].fill_between(iterations,
-                           mean_objective - std_objective,
-                           mean_objective + std_objective,
-                           alpha=0.3, color=color[0])
-    
+                             mean_objective - std_objective,
+                             mean_objective + std_objective,
+                             alpha=0.3, color=color[0])
+
     # Format plots
     axes[0].set_xlabel('Iteration')
     axes[0].set_ylabel('Sum Rate (nat/s/Hz)')
     axes[0].set_title('Average Sum Rate Convergence')
     axes[0].legend()
     axes[0].grid(True, alpha=0.3)
-    
+
     axes[1].set_xlabel('Iteration')
     axes[1].set_ylabel('Trace of Inverse FIM')
     axes[1].set_title('Average CRB Trace Convergence')
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
-    
+
     axes[2].set_xlabel('Iteration')
     axes[2].set_ylabel('Total Objective Value')
     axes[2].set_title('Average Objective Convergence')
     axes[2].legend()
     axes[2].grid(True, alpha=0.3)
-    
+
     plt.tight_layout()
-    plt.savefig('monte_carlo_averaged_convergence_python.png', dpi=300, bbox_inches='tight')
+
+    # Save plot
+    output_file = os.path.join(output_dir, 'monte_carlo_averaged_convergence_python.png')
+    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    print(f"Convergence plot saved to: {output_file}")
     plt.show()
-    
+
     # Additional statistics plot
     fig2, axes2 = plt.subplots(1, 2, figsize=(12, 5))
-    
+
     # Convergence iteration histogram
     all_iterations = []
-    lin_vals = [0.05, 0.1, 0.15]
     for i, lin_val in enumerate(lin_vals):
         key = f'lin_{lin_val}'
-        iterations = statistics[key]['convergence_iterations']
-        all_iterations.extend(iterations)
-        axes2[0].hist(iterations, bins=20, alpha=0.7, label=f'δc = {lin_val}')
-    
+        if key in statistics:
+            iterations = statistics[key]['convergence_iterations']
+            all_iterations.extend(iterations)
+            axes2[0].hist(iterations, bins=20, alpha=0.7, label=f'δc = {lin_val}')
+
     axes2[0].set_xlabel('Convergence Iterations')
     axes2[0].set_ylabel('Frequency')
     axes2[0].set_title('Distribution of Convergence Iterations')
     axes2[0].legend()
     axes2[0].grid(True, alpha=0.3)
-    
+
     # Final objective values box plot (take real part)
     final_objectives = []
     box_labels = []
     for lin_val in lin_vals:
         key = f'lin_{lin_val}'
-        final_objectives.append(np.real(statistics[key]['final_values']['objective']))
-        box_labels.append(f'δc = {lin_val}')
-    
-    axes2[1].boxplot(final_objectives, tick_labels=box_labels)
-    axes2[1].set_ylabel('Final Objective Value')
-    axes2[1].set_title('Distribution of Final Objective Values')
-    axes2[1].grid(True, alpha=0.3)
-    
+        if key in statistics:
+            final_objectives.append(np.real(statistics[key]['final_values']['objective']))
+            box_labels.append(f'δc = {lin_val}')
+
+    if final_objectives:
+        axes2[1].boxplot(final_objectives, tick_labels=box_labels)
+        axes2[1].set_ylabel('Final Objective Value')
+        axes2[1].set_title('Distribution of Final Objective Values')
+        axes2[1].grid(True, alpha=0.3)
+
     plt.tight_layout()
-    plt.savefig('monte_carlo_statistics_python.png', dpi=300, bbox_inches='tight')
+
+    # Save statistics plot
+    output_file2 = os.path.join(output_dir, 'monte_carlo_statistics_python.png')
+    plt.savefig(output_file2, dpi=300, bbox_inches='tight')
+    print(f"Statistics plot saved to: {output_file2}")
     plt.show()
 
-def save_monte_carlo_results(statistics, all_runs_data, num_runs, save_individual):
+def save_monte_carlo_results(statistics, all_runs_data, config, num_runs, save_individual, output_dir='.'):
     """Save Monte Carlo results to files"""
-    
+
     # Save averaged statistics
-    savemat('monte_carlo_averaged_results_python.mat', {
+    output_file = os.path.join(output_dir, 'monte_carlo_averaged_results_python.mat')
+    savemat(output_file, {
         'statistics': statistics,
         'num_runs': num_runs,
+        'config': {
+            'Nth': config.Nth,
+            'Ntv': config.Ntv,
+            'Nrh': config.Nrh,
+            'Nrv': config.Nrv,
+            'K': config.K,
+            'M': config.M,
+            'L': config.L,
+            'tolerance': config.tolerance,
+            'max_iterations': config.max_iterations,
+            'convergence_lin_values': config.convergence_lin_values
+        },
         'description': 'Monte Carlo averaged convergence statistics'
     })
-    
+    print(f"Averaged statistics saved to: {output_file}")
+
     # Save individual runs if requested
     if save_individual:
-        savemat('monte_carlo_individual_runs_python.mat', {
+        output_file2 = os.path.join(output_dir, 'monte_carlo_individual_runs_python.mat')
+        savemat(output_file2, {
             'all_runs_data': all_runs_data,
             'num_runs': num_runs,
             'description': 'Individual Monte Carlo run data'
         })
-        print(f"Individual run data saved to monte_carlo_individual_runs_python.mat")
-    
-    print(f"Averaged statistics saved to monte_carlo_averaged_results_python.mat")
+        print(f"Individual run data saved to: {output_file2}")
 
 def main():
     """Main function"""
-    
-    # Configuration
-    NUM_RUNS = 300  # Number of Monte Carlo runs (reduced for testing)
-    SAVE_INDIVIDUAL = False  # Set to True to save all individual run data
-    
+
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description='Monte Carlo Verification of propose_SCA Algorithm',
+        parents=[SimulationConfig.create_argument_parser()],
+        conflict_handler='resolve'
+    )
+
+    # Add Monte Carlo specific arguments
+    mc_group = parser.add_argument_group('Monte Carlo Configuration')
+    mc_group.add_argument('--num-runs', type=int, default=300,
+                          help='Number of Monte Carlo runs')
+    mc_group.add_argument('--save-individual', action='store_true',
+                          help='Save individual run data')
+    mc_group.add_argument('--output-dir', type=str, default='.',
+                          help='Output directory for results')
+    mc_group.add_argument('--temp-dir', type=str, default=None,
+                          help='Temporary directory for intermediate files')
+
+    args = parser.parse_args()
+
+    # Create output directory
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    # Initialize configuration from arguments
+    config = SimulationConfig.from_args(args)
+    config = config.get_scenario_config('fig1')
+
     print("Monte Carlo Verification of propose_SCA Algorithm")
     print("=" * 50)
     print("This script verifies algorithm correctness using statistical averaging")
-    print("over multiple random initializations (no seeds used).")
-    print(f"Running {NUM_RUNS} Monte Carlo simulations...")
+    print("over multiple random initializations.")
+    print(f"Running {args.num_runs} Monte Carlo simulations...")
     print()
-    
+
     # Run Monte Carlo verification
     try:
-        statistics = monte_carlo_verification(NUM_RUNS, SAVE_INDIVIDUAL)
-        
+        statistics, all_runs_data = monte_carlo_verification(
+            config, args.num_runs, args.save_individual, args.temp_dir)
+
         if statistics:
+            print("\n=== PLOTTING RESULTS ===")
+            plot_monte_carlo_results(statistics, config, args.num_runs, args.output_dir)
+
+            print("\n=== SAVING RESULTS ===")
+            save_monte_carlo_results(statistics, all_runs_data, config, 
+                                     args.num_runs, args.save_individual, args.output_dir)
+
             print("\n=== VERIFICATION SUMMARY ===")
             print("✅ Monte Carlo verification completed successfully!")
             print("✅ Algorithm shows consistent convergence behavior")
             print("✅ Statistical properties are well-defined")
-            print("\nFiles generated:")
+            print(f"\nFiles generated in {args.output_dir}:")
             print("  - monte_carlo_averaged_results_python.mat")
             print("  - monte_carlo_averaged_convergence_python.png")
             print("  - monte_carlo_statistics_python.png")
-            if SAVE_INDIVIDUAL:
+            if args.save_individual:
                 print("  - monte_carlo_individual_runs_python.mat")
-                
+
             # Quick summary of results
             print("\n=== QUICK SUMMARY ===")
-            for lin_val in [0.05, 0.1, 0.15]:
+            for lin_val in config.convergence_lin_values:
                 key = f'lin_{lin_val}'
-                final_obj = statistics[key]['final_values']['objective']
-                print(f"δc = {lin_val}: Final objective = {np.mean(final_obj):.4f} ± {np.std(final_obj):.4f}")
-                
+                if key in statistics:
+                    final_obj = statistics[key]['final_values']['objective']
+                    print(f"δc = {lin_val}: Final objective = {np.mean(final_obj):.4f} ± {np.std(final_obj):.4f}")
+
         else:
             print("❌ Monte Carlo verification failed!")
-            
+
     except KeyboardInterrupt:
         print("\n⚠️ Monte Carlo verification interrupted by user")
     except Exception as e:
