@@ -40,5 +40,6 @@ __all__ = [
     'calculateFIM',
     'construct_matrixQ',
     'SimulationConfig',
-    'db2pow'
+    'db2pow',
+    'square_abs'
 ]
