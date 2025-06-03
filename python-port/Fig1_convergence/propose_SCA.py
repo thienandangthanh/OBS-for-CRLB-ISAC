@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from time import perf_counter
 import os
 import sys
+import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.steering_matrix import construct_steer_matrix_and_derivative_steer_matrix
@@ -13,6 +14,7 @@ from utils.calculate_fim import calculateFIM
 from utils.construct_matrixQ import construct_matrixQ
 from utils.db2pow import db2pow
 from utils.square_abs import square_abs
+from utils.simulation_config import SimulationConfig
 
 # Not used
 def initial_Ws(L, noise_s, Nt, num_sensing_streams, A, dAtheta, dAphi, B, dBtheta, dBphi, U):
@@ -29,46 +31,73 @@ def initial_Ws(L, noise_s, Nt, num_sensing_streams, A, dAtheta, dAphi, B, dBthet
     return Ws
 
 def main():
-    # Initialize parameters
-    Nth = 4
-    Ntv = 4
-    Nt = Nth * Ntv
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description='OBS-for-CRLB-ISAC Figure 1 Convergence Analysis',
+        parents=[SimulationConfig.create_argument_parser()],
+        conflict_handler='resolve'
+    )
 
-    Nrh = 5
-    Nrv = 4
-    Nr = Nrh * Nrv
+    # Add figure-specific arguments
+    parser.add_argument('--save-plots', action='store_true',
+                        help='Save plots as files instead of displaying')
+    parser.add_argument('--output-dir', type=str, default='.',
+                        help='Directory to save output files')
 
-    channel_number = 50
-    K = 4
-    M = 2
+    args = parser.parse_args()
 
-    rng = np.random.default_rng(0)
-    theta = -np.pi/3 + 2*np.pi/3 * rng.random(M)
-    phi = -np.pi/3 + 2*np.pi/3 * rng.random(M)
+    # Initialize configuration from arguments
+    config = SimulationConfig.from_args(args)
+    config = config.get_scenario_config('fig1')
 
-    num_sensing_streams = Nt
-    tolerance = 1e-5
+    # Print configuration
+    print(config)
+    print()
 
-    delta_all = np.arange(-7, 4.8+ 0.01, 0.05)
+    # Get configuration parameters
+    Nth = config.Nth
+    Ntv = config.Ntv
+    Nt = config.Nt
+
+    Nrh = config.Nrh
+    Nrv = config.Nrv
+    Nr = config.Nr
+
+    channel_number = config.channel_number
+    K = config.K
+    M = config.M
+
+    num_sensing_streams = config.num_sensing_streams
+    tolerance = config.tolerance
+    max_iterations = config.max_iterations
+
+    delta_s = config.delta_s
+    lin = config.convergence_lin_values  # [0.05, 0.1, 0.15]
+
+    Pt = config.Pt
+    noise_c = config.noise_c
+    noise_s = config.noise_s
+
+    L = config.L
+    kappa = config.kappa
+
+    # Initialize random number generator
+    rng = np.random.default_rng(config.random_seed)
+
+    # Generate target angles using config method
+    theta, phi = config.generate_target_angles(rng)
+
+    delta_all = config.get_delta_range()
     Per_all = np.zeros((2, len(delta_all)))
     Con = [[], [], []]
 
     for channel in [2]:
         for de in range(3):
-            lin = [0.05, 0.1, 0.15]
-            delta_s = 1
             delta_c = lin[de]
 
-            Pt = db2pow(10-30)  # dBm
-            noise_c = db2pow(0-30)  # dBm
-            noise_s = db2pow(0-30)  # dBm
-
-            # np.random.seed(channel)
+            # Generate alpha using config method
             rng = np.random.default_rng(channel)
-            alpha = 0.1 * (1 + 0.2 * rng.standard_normal(M)) * np.exp(1j * 2 * np.pi * rng.random(M))
-
-            L = 30
-            kappa = 2 * L / noise_s
+            alpha = config.generate_alpha(rng)
 
             H = 1/np.sqrt(2) * (rng.standard_normal((Nt, K)) + 1j * rng.standard_normal((Nt, K)))
 
@@ -90,7 +119,7 @@ def main():
             FIM = calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
             W_last = W.copy()
 
-            for count in range(2000):
+            for count in range(max_iterations):
                 T_k = np.sum(square_abs(H.conj().T @ W[:, :K]), axis=1) + noise_c * np.ones(K)
                 alpha_k = T_k / (T_k - square_abs(np.diag(H.conj().T @ W[:, :K]))) - 1
                 beta_k = np.sqrt(1 + alpha_k) * np.diag(H.conj().T @ W[:, :K]) / T_k
@@ -133,7 +162,7 @@ def main():
 
                 # Check convergence
                 norm_diff = np.linalg.norm(W - W_last)
-                
+
                 if norm_diff < tolerance:
                     break
                 else:
@@ -148,7 +177,13 @@ def main():
             # TODO: Why the dot of the first T_k. is omitted
             SR = np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W)))))
 
+            print(f"Configuration: lin={lin[de]}")
+            print(f"Converged after {len(Con[de])} iterations")
+            print(f"Final objective value: {Con[de][-1, 2]:.6f}")
+            print(f"Sum Rate: {SR:.6f}")
+            print(f"CRB: {CRB:.6f}")
             print(f"Time elapsed: {perf_counter() - start_time:.6f} seconds")
+            print()
 
             # Plotting
             plt.figure(1)
@@ -175,11 +210,33 @@ def main():
     Con_matlab = np.empty((3, 1), dtype=object)
     for i in range(3):
         Con_matlab[i, 0] = Con[i]
-    
-    savemat('data_convergence.mat', {
+
+    # Save to output directory
+    output_file = os.path.join(args.output_dir, 'data_convergence.mat')
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    savemat(output_file, {
         'Con': Con_matlab  # Use (3,1) object array to match MATLAB cell array
     })
-    plt.show()
+    print(f"Results saved to: {output_file}")
+
+    if args.save_plots:
+        # Save plots as files
+        plot_names = [
+            'fig1_sum_rate_vs_iteration.png',
+            'fig1_inverse_fim_trace_vs_iteration.png', 
+            'fig1_objective_value_vs_iteration.png'
+        ]
+
+        for fig_num, plot_name in enumerate(plot_names, 1):
+            plot_file = os.path.join(args.output_dir, plot_name)
+            plt.figure(fig_num)
+            plt.tight_layout()
+            plt.savefig(plot_file, dpi=300, bbox_inches='tight')
+            print(f"Plot {fig_num} saved to: {plot_file}")
+        plt.close('all')
+    else:
+        plt.show()
 
 if __name__ == "__main__":
     main()
