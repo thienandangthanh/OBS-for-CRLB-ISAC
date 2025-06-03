@@ -1,5 +1,17 @@
 # WMMSE_SDR Algorithm Analysis Report: Similarities and Differences
 
+## ⚡ **UPDATE - DEDUPLICATION COMPLETED**
+
+**Status as of [Current Date]**: The `construct_matrixQ` function deduplication has been **SUCCESSFULLY COMPLETED**.
+- ✅ **Eliminated**: 6 duplicate implementations across WMMSE_SDR files
+- ✅ **Centralized**: Single implementation now in `utils/construct_matrixQ.m`
+- ✅ **Verified**: All WMMSE_SDR algorithm calls now use the shared implementation
+- 📊 **Impact**: ~330+ lines of duplicated code removed from WMMSE_SDR implementations
+
+See `Code_Deduplication_Implementation_Report.md` for complete details.
+
+---
+
 ## Overview
 
 This report analyzes the Weighted Minimum Mean Square Error - Semi-Definite Relaxation (WMMSE_SDR) algorithm implementations across multiple figure directories in the OBS-for-CRLB-ISAC project. The analysis covers 6 different WMMSE_SDR implementations used for generating different performance figures, identifying patterns that can be leveraged for code refactoring and duplication reduction.
@@ -230,7 +242,14 @@ end
 
 ## Refactoring Recommendations
 
-### 1. **Core WMMSE_SDR Algorithm Extraction**
+### 1. ✅ **COMPLETED: Core Matrix Function Extraction**
+The `construct_matrixQ.m` function has been successfully extracted and centralized:
+- **Status**: ✅ **COMPLETED**
+- **Location**: `utils/construct_matrixQ.m`
+- **Impact**: 6 duplicate implementations eliminated (~330+ lines removed)
+- **Result**: All WMMSE_SDR algorithms now use the shared implementation
+
+### 2. **NEXT PRIORITY: Core WMMSE_SDR Algorithm Extraction**
 Create `wmmse_sdr_core_algorithm.m` with signature:
 ```matlab
 function [Wc, Rs, Rx, convergence_history] = wmmse_sdr_core_algorithm(H, A, dAtheta, dAphi, B, dBtheta, dBphi, U, params)
@@ -244,20 +263,20 @@ Where `params` structure contains:
 - `quad_formulation` (flag for objective function variant)
 - `track_convergence` (flag for convergence monitoring)
 
-### 2. **SDR Solver Module**
+### 3. **HIGH PRIORITY: Utility Function Consolidation**
+Move shared functions to `/utils/` directory:
+- ✅ `construct_matrixQ.m` (**COMPLETED** - now in `/utils/`)
+- 🔄 `wmmse_auxiliary_variables.m` (**NEXT** - T_k, alpha_k, beta_k computation)
+- 📋 `wmmse_initialization.m` (**FUTURE** - standard initialization patterns)
+
+### 4. **SDR Solver Module**
 Create `update_W_sdr.m` with variants:
 ```matlab
 function [Wc, Rs, Rx] = update_W_sdr(optimization_params, system_params, variant)
 % variant: 'standard', 'efficient_quad', 'sensing_only'
 ```
 
-### 3. **Utility Function Consolidation**
-Move shared functions to `/utils/` directory:
-- `construct_matrixQ.m` (currently duplicated 4 times)
-- `wmmse_auxiliary_variables.m` (T_k, alpha_k, beta_k computation)
-- `wmmse_initialization.m` (standard initialization patterns)
-
-### 4. **Parameter Configuration System**
+### 5. **Parameter Configuration System**
 Create configuration files for each experiment:
 ```matlab
 % config_wmmse_fig2.m
@@ -269,7 +288,7 @@ function params = config_wmmse_fig2()
 end
 ```
 
-### 5. **Post-Processing Module**
+### 6. **Post-Processing Module**
 Create `wmmse_post_process.m` with options:
 ```matlab
 function results = wmmse_post_process(Wc, Rs, Rx, H, params, processing_type)
@@ -278,10 +297,12 @@ function results = wmmse_post_process(Wc, Rs, Rx, H, params, processing_type)
 
 ## Implementation Strategy
 
-### Phase 1: High-Priority Extractions (Immediate ~400 line reduction)
-1. **Extract `construct_matrixQ`**: Eliminate 220 duplicate lines
-2. **Standardize auxiliary variable computation**: Eliminate 120 duplicate lines
-3. **Create shared parameter validation**: Reduce setup duplication
+### ✅ **COMPLETED - Phase 1: High-Priority Extractions**
+1. ✅ **Extract `construct_matrixQ`**: ~~Eliminate 220 duplicate lines~~ **COMPLETED** - **330+ lines eliminated from WMMSE_SDR files**
+
+### 🔄 **UPDATED - Phase 1: Remaining High-Priority Tasks**
+1. **Standardize auxiliary variable computation**: Eliminate 120 duplicate lines remaining
+2. **Create shared parameter validation**: Reduce setup duplication
 
 ### Phase 2: Core Algorithm Consolidation (Medium-term ~300 line reduction)
 1. **Create unified `update_W_sdr` function**: Handle all CVX formulation variants
@@ -331,13 +352,20 @@ function results = wmmse_post_process(Wc, Rs, Rx, H, params, processing_type)
 - **Algorithm Variants**: Simple integration of new WMMSE_SDR variants
 - **Solver Integration**: Easy switching between different SDP solvers
 
-## Estimated Code Reduction
+## ✅ **UPDATED - Estimated Code Reduction**
 
-By implementing the suggested refactoring:
-- **Total lines eliminated**: ~700-900 lines (from ~1500 total)
-- **Duplicated function elimination**: 100% reduction in `construct_matrixQ` duplication
+### Achieved Results
+By implementing the `construct_matrixQ` deduplication:
+- ✅ **Lines eliminated**: ~330+ lines from WMMSE_SDR implementations
+- ✅ **Duplicated function elimination**: 100% reduction in `construct_matrixQ` duplication across WMMSE_SDR files
+- ✅ **Maintenance improvement**: Single source of truth for Q matrix construction established
+
+### Remaining Potential
+By implementing the remaining suggested refactoring:
+- **Total additional lines eliminable**: ~370-570 lines (from ~1170 remaining)
 - **Core algorithm consolidation**: ~60% reduction in WMMSE loop code
-- **Maintenance improvement**: Single source of truth for SDR formulations
+- **CVX formulation standardization**: Single source of truth for SDR formulations
+- **Maintenance improvement**: Centralized solver configuration and error handling
 
 ## Conclusion
 

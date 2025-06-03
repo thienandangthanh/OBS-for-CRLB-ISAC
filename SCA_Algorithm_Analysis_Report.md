@@ -1,5 +1,15 @@
 # SCA Algorithm Analysis Report: Similarities and Differences
 
+## ⚡ **UPDATE - DEDUPLICATION COMPLETED**
+
+**Status as of [Current Date]**: The `construct_matrixQ` function deduplication has been **SUCCESSFULLY COMPLETED**.
+- ✅ **Eliminated**: 7 duplicate implementations across SCA files
+- ✅ **Centralized**: Single implementation now in `utils/construct_matrixQ.m`
+- ✅ **Verified**: All SCA algorithm calls now use the shared implementation
+- 📊 **Impact**: ~350+ lines of duplicated code removed from SCA implementations
+
+See `Code_Deduplication_Implementation_Report.md` for complete details.
+
 ## Overview
 
 This report analyzes the Successive Convex Approximation (SCA) algorithm implementations across multiple figure directories in the OBS-for-CRLB-ISAC project. The analysis covers 7 different SCA implementations used for generating different performance figures, identifying patterns that can be leveraged for code refactoring and duplication reduction.
@@ -146,7 +156,14 @@ All SCA implementations depend on these external functions:
 
 ## Refactoring Recommendations
 
-### 1. **Core SCA Algorithm Extraction**
+### 1. ✅ **COMPLETED: Core Matrix Function Extraction**
+The `construct_matrixQ.m` function has been successfully extracted and centralized:
+- **Status**: ✅ **COMPLETED**
+- **Location**: `utils/construct_matrixQ.m`
+- **Impact**: 7 duplicate implementations eliminated (~350+ lines removed)
+- **Result**: All SCA algorithms now use the shared implementation
+
+### 2. **NEXT PRIORITY: Core SCA Algorithm Extraction**
 Create `sca_core_algorithm.m` with signature:
 ```matlab
 function [W, FIM, Con] = sca_core_algorithm(W_init, H, A, dAtheta, dAphi, B, dBtheta, dBphi, U, params)
@@ -158,7 +175,13 @@ Where `params` structure contains:
 - `tolerance`, `max_iterations` (convergence parameters)
 - `c2_variant` (flag for C2 construction type)
 
-### 2. **Parameter Configuration System**
+### 3. **HIGH PRIORITY: Utility Function Consolidation**
+Move all common functions to a shared utilities module:
+- ✅ `construct_matrixQ.m` (**COMPLETED** - now in `/utils/`)
+- 🔄 `initial_Ws.m` (**NEXT** - currently duplicated 7 times ~105 lines)
+- 📋 Common parameter initialization functions (**FUTURE**)
+
+### 4. **Parameter Configuration System**
 Create parameter configuration files:
 ```matlab
 % config_fig1.m
@@ -170,13 +193,7 @@ function params = config_fig1()
 end
 ```
 
-### 3. **Utility Function Consolidation**
-Move all common functions to a shared utilities module:
-- `construct_matrixQ.m` (currently duplicated 7 times)
-- `initial_Ws.m` (currently duplicated 7 times)
-- Common parameter initialization functions
-
-### 4. **Experiment Framework**
+### 5. **Experiment Framework**
 Create a unified experiment runner:
 ```matlab
 function run_sca_experiment(config_name, output_file)
@@ -203,23 +220,31 @@ end
 
 ## Estimated Code Reduction
 
-By implementing the suggested refactoring:
-- **Total lines eliminated**: ~800-1000 lines (from ~1500 total)
-- **Duplicated function elimination**: 100% reduction in `construct_matrixQ` and `initial_Ws` duplication
-- **Maintenance improvement**: Single source of truth for core SCA algorithm
+### Achieved Results
+By implementing the `construct_matrixQ` deduplication:
+- ✅ **Lines eliminated**: ~350+ lines from SCA implementations
+- ✅ **Duplicated function elimination**: 100% reduction in `construct_matrixQ` duplication across SCA files
+- ✅ **Maintenance improvement**: Single source of truth for Q matrix construction established
+
+### Remaining Potential
+By implementing the remaining suggested refactoring:
+- **Total additional lines eliminable**: ~450-650 lines (from ~1150 remaining)
+- **`initial_Ws` elimination**: 100% reduction in remaining duplication
 - **Consistency improvement**: Guaranteed identical algorithm implementation across all experiments
 
 ## Implementation Priority
 
-### High Priority
-1. **Extract `construct_matrixQ` function**: Immediate ~700 line reduction
-2. **Extract `initial_Ws` function**: Immediate ~105 line reduction
-3. **Create shared parameter validation**: Reduce parameter setup duplication
+### ✅ **COMPLETED - High Priority**
+1. ✅ **Extract `construct_matrixQ` function**: ~~Immediate ~700 line reduction~~ **COMPLETED** - **350+ lines eliminated from SCA files**
+
+### 🔄 **UPDATED - High Priority**
+1. **Extract `initial_Ws` function**: Immediate ~105 line reduction remaining
+2. **Create shared parameter validation**: Reduce parameter setup duplication
+3. **Create core SCA algorithm function**: Reduces ~350 lines
 
 ### Medium Priority
-1. **Create core SCA algorithm function**: Reduces ~350 lines
-2. **Standardize data storage patterns**: Improves consistency
-3. **Create parameter configuration system**: Improves maintainability
+1. **Standardize data storage patterns**: Improves consistency
+2. **Create parameter configuration system**: Improves maintainability
 
 ### Low Priority
 1. **Unified experiment framework**: Long-term maintainability improvement

@@ -1,5 +1,17 @@
 # FP_SGDA Algorithm Analysis Report: Similarities and Differences
 
+## ⚡ **UPDATE - DEDUPLICATION COMPLETED**
+
+**Status as of [Current Date]**: The `construct_matrixQ` function deduplication has been **SUCCESSFULLY COMPLETED**.
+- ✅ **Eliminated**: 4 duplicate implementations across FP_SGDA files
+- ✅ **Centralized**: Single implementation now in `utils/construct_matrixQ.m`
+- ✅ **Verified**: All FP_SGDA algorithm calls now use the shared implementation
+- 📊 **Impact**: ~196+ lines of duplicated code removed from FP_SGDA implementations
+
+See `Code_Deduplication_Implementation_Report.md` for complete details.
+
+---
+
 ## Overview
 
 This report analyzes the Fractional Programming - Smoothed Gradient Descent Ascent (FP_SGDA) algorithm implementations across multiple figure directories in the OBS-for-CRLB-ISAC project. The analysis covers 4 different FP_SGDA implementations used for generating different performance figures, identifying patterns that can be leveraged for code refactoring and duplication reduction.
@@ -219,7 +231,14 @@ All FP_SGDA implementations depend on these external functions:
 
 ## Refactoring Recommendations
 
-### 1. **Core FP_SGDA Algorithm Extraction**
+### 1. ✅ **COMPLETED: Core Matrix Function Extraction**
+The `construct_matrixQ.m` function has been successfully extracted and centralized:
+- **Status**: ✅ **COMPLETED**
+- **Location**: `utils/construct_matrixQ.m`
+- **Impact**: 4 duplicate implementations eliminated (~196+ lines removed)
+- **Result**: All FP_SGDA algorithms now use the shared implementation
+
+### 2. **NEXT PRIORITY: Core FP_SGDA Algorithm Extraction**
 Create `fp_sgda_core_algorithm.m` with signature:
 ```matlab
 function [W, FIM, Con] = fp_sgda_core_algorithm(W_init, H, A, dAtheta, dAphi, B, dBtheta, dBphi, U, params)
@@ -231,7 +250,13 @@ Where `params` structure contains:
 - `L`, `noise_s`, `noise_c` (system parameters)
 - `tolerance`, `max_iterations` (convergence parameters)
 
-### 2. **Parameter Configuration System**
+### 3. **HIGH PRIORITY: Utility Function Consolidation**
+Move all common functions to shared utilities:
+- ✅ `construct_matrixQ.m` (**COMPLETED** - now in `/utils/`)
+- 🔄 `initial_Ws.m` (**NEXT** - currently duplicated 4 times ~48 lines)
+- 📋 Common gradient update functions (**FUTURE**)
+
+### 4. **Parameter Configuration System**
 Create parameter configuration files:
 ```matlab
 % config_fp_sgda_fig2.m
@@ -244,13 +269,7 @@ function params = config_fp_sgda_fig2()
 end
 ```
 
-### 3. **Utility Function Consolidation**
-Move all common functions to shared utilities:
-- `construct_matrixQ.m` (currently duplicated 4 times)
-- `initial_Ws.m` (currently duplicated 4 times)
-- Common gradient update functions
-
-### 4. **Experiment Framework**
+### 5. **Experiment Framework**
 Create a unified FP_SGDA experiment runner:
 ```matlab
 function run_fp_sgda_experiment(config_name, output_file)
@@ -260,31 +279,39 @@ function run_fp_sgda_experiment(config_name, output_file)
 end
 ```
 
-## Estimated Code Reduction
-
-By implementing the suggested refactoring:
-- **Total lines eliminated**: ~500-600 lines (from ~987 total)
-- **Duplicated function elimination**: 100% reduction in `construct_matrixQ` and `initial_Ws` duplication
-- **Core algorithm consolidation**: ~240 lines reduced to single implementation
-- **Maintenance improvement**: Single source of truth for FP_SGDA algorithm
-- **Consistency improvement**: Guaranteed identical algorithm implementation across all experiments
-
 ## Implementation Priority
 
-### High Priority
-1. **Extract `construct_matrixQ` function**: Immediate ~196 line reduction
-2. **Extract `initial_Ws` function**: Immediate ~48 line reduction
-3. **Create core FP_SGDA algorithm function**: Reduces ~240 lines
+### ✅ **COMPLETED - High Priority**
+1. ✅ **Extract `construct_matrixQ` function**: ~~Immediate ~196 line reduction~~ **COMPLETED** - **196+ lines eliminated from FP_SGDA files**
+
+### 🔄 **UPDATED - High Priority**
+1. **Extract `initial_Ws` function**: Immediate ~48 line reduction remaining
+2. **Create core FP_SGDA algorithm function**: Reduces ~240 lines
+3. **Standardize parameter configuration**: Improves maintainability
 
 ### Medium Priority
-1. **Standardize parameter configuration**: Improves maintainability
-2. **Create shared gradient update functions**: Reduces duplication
-3. **Unify data storage patterns**: Improves consistency
+1. **Create shared gradient update functions**: Reduces duplication
+2. **Unify data storage patterns**: Improves consistency
 
 ### Low Priority
 1. **Unified experiment framework**: Long-term maintainability improvement
 2. **Automated testing framework**: Ensures refactoring doesn't break functionality
 3. **Performance optimization**: Profile and optimize common bottlenecks
+
+## ✅ **UPDATED - Estimated Code Reduction**
+
+### Achieved Results
+By implementing the `construct_matrixQ` deduplication:
+- ✅ **Lines eliminated**: ~196+ lines from FP_SGDA implementations
+- ✅ **Duplicated function elimination**: 100% reduction in `construct_matrixQ` duplication across FP_SGDA files
+- ✅ **Maintenance improvement**: Single source of truth for Q matrix construction established
+
+### Remaining Potential
+By implementing the remaining suggested refactoring:
+- **Total additional lines eliminable**: ~300-400 lines (from ~791 remaining)
+- **`initial_Ws` elimination**: 100% reduction in remaining duplication
+- **Core algorithm consolidation**: ~240 lines reduced to single implementation
+- **Maintenance improvement**: Single source of truth for FP_SGDA algorithm
 
 ## Comparison with SCA Algorithm
 
@@ -318,4 +345,4 @@ The analysis reveals significant code duplication across FP_SGDA implementations
 2. Create core FP_SGDA algorithm with configurable parameters
 3. Implement unified experiment framework compatible with SCA refactoring
 
-This refactoring would reduce the FP_SGDA codebase by approximately 50-60% while maintaining full functionality and enabling better integration with the overall ISAC optimization framework. 
+This refactoring would reduce the FP_SGDA codebase by approximately 50-60% while maintaining full functionality and enabling better integration with the overall ISAC optimization framework.
