@@ -11,10 +11,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import os
+import argparse
 
 # Import only COLORS constant
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from constants import COLORS
+
+# Setup argument parser
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description='Plot Figure 3: Performance vs Number of Sensing Streams')
+    parser.add_argument('--save-plots', action='store_true', help='Save plot as files')
+    parser.add_argument('--output-dir', type=str, default='.',
+                        help='Directory to save output files')
+    return parser.parse_args()
 
 def load_and_process_data():
     """
@@ -101,12 +111,14 @@ def load_and_process_data():
 
     return data_dict
 
-def create_performance_plot(data_dict):
+def create_performance_plot(data_dict, save_plots=False, output_dir='.'):
     """
     Create the performance vs Ns plot.
 
     Args:
         data_dict (dict): Dictionary containing the processed data
+        save_plots (bool, optional): Whether to save the plots. Defaults to False.
+        output_dir (str, optional): Directory to save plot. Defaults to current directory.
     """
     # Create figure
     plt.figure(figsize=(7, 5))
@@ -162,6 +174,13 @@ def create_performance_plot(data_dict):
 
     # Adjust layout and show
     plt.tight_layout()
+    
+    # Save plot if save_path is specified
+    if save_plots:
+        plot_file = os.path.join(output_dir, 'fig3_performance_vs_Ns.png')
+        plt.savefig(plot_file, dpi=300, bbox_inches='tight')
+        print(f"Plot saved to: {plot_file}")
+    
     plt.show()
 
 def main():
@@ -171,11 +190,14 @@ def main():
     print("Starting Figure 3: Performance vs Number of Sensing Streams")
     print("=" * 60)
 
+    # Parse command line arguments
+    args = parse_args()
+
     # Load and process data
     data_dict = load_and_process_data()
 
     # Create the plot
-    create_performance_plot(data_dict)
+    create_performance_plot(data_dict, args.save_plots)
 
     print("Plot completed successfully!")
 
