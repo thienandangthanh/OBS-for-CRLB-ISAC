@@ -78,10 +78,6 @@ def create_tradeoff_plot(data_dict):
     Args:
         data_dict (dict): Dictionary containing the processed data
     """
-    # Set up matplotlib with basic configuration
-    plt.rcParams['font.family'] = 'Times New Roman'
-    plt.rcParams['font.size'] = 10
-
     # Create figure
     plt.figure(figsize=(7, 5))
 

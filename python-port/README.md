@@ -132,7 +132,6 @@ ArXiv: https://arxiv.org/pdf/2503.09489
 1. **ModuleNotFoundError**: Make sure the virtual environment is activated and dependencies are installed
 2. **File not found error**: Ensure the corresponding `.mat` files are copied to the correct subdirectories
 3. **Data structure issues**: The scripts include debugging output to help identify MATLAB data structure problems
-4. **Font issues**: If Times New Roman font is not available, matplotlib will fall back to default fonts
 
 ### Getting Help:
 

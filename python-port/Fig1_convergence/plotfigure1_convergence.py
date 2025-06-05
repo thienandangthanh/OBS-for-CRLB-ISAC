@@ -73,10 +73,6 @@ def main():
     # Add legend
     plt.legend(loc='lower right')  # 'southeast' in MATLAB corresponds to 'lower right'
 
-    # Set font properties
-    plt.rcParams['font.family'] = 'Times New Roman'
-    plt.rcParams['font.size'] = 10
-
     # Adjust layout
     plt.tight_layout()
     

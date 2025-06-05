@@ -71,10 +71,6 @@ ax3 = plt.gca().add_artist(leg2)
 leg3 = plt.legend(lines_ws, [l.get_label() for l in lines_ws], 
                  loc='center', title='Objective Value')
 
-# Set font properties
-plt.rcParams['font.family'] = 'Times New Roman'
-plt.rcParams['font.size'] = 10
-
 # Adjust layout and display
 plt.tight_layout()
 plt.show()

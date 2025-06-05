@@ -59,10 +59,6 @@ plt.grid(True)
 plt.legend(['WMMSE-SDR', 'FP-SGDA', 'Algorithm 1, Ns=3M', 'Algorithm 1, Ns=0', 'LD Algorithm1, Ns=3M'],
            loc='upper right')
 
-# Set font properties
-plt.rcParams['font.family'] = 'Times New Roman'
-plt.rcParams['font.size'] = 10
-
 # Adjust layout and display
 plt.tight_layout()
 plt.show()
