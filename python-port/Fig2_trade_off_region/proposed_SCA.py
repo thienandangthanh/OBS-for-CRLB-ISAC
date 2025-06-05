@@ -72,16 +72,12 @@ def main():
     )
 
     # Add figure-specific arguments
-    parser.add_argument('--save-data', action='store_true',
+    parser.add_argument('--save-data', action='store_true', default=True,
                         help='Save results to data files')
     parser.add_argument('--save-plots', action='store_true',
                         help='Save plots as files instead of displaying')
     parser.add_argument('--output-dir', type=str, default='.',
                         help='Directory to save output files')
-    parser.add_argument('--m-target', type=int, default=2,
-                        help='Number of targets')
-    parser.add_argument('--k-par', type=int, default=2,
-                        help='Parameter index for sweep')
 
     args = parser.parse_args()
 
@@ -106,8 +102,6 @@ def main():
     Nr = config.Nr
 
     # System configuration
-    # NOTE:differences from figure 1
-    # no M, use M_max instead
     K = config.K
     M_max = config.M_max
 
@@ -126,7 +120,6 @@ def main():
     # Sweep configuration
     delta_all = config.get_delta_range()  # -7:0.2:4.8
 
-    # NOTE: new variables, not exist in Figure 1
     I_in = len(delta_all)
     I_out = config.I_out
 
@@ -135,60 +128,30 @@ def main():
     CRB_all = np.zeros((I_out, I_in))
     Time_all = np.zeros((I_out, I_in))
 
-    # Main computation loop
-    m_target = args.m_target  # Default: 2
-    k_par = args.k_par        # Default: 2
+    # Total number of parameter combinations
+    total_combinations = I_out * I_in
 
-    print(f"Running analysis for m_target={m_target}, k_par={k_par}")
-    print(f"Delta range: {delta_all[0]:.1f} to {delta_all[-1]:.1f} with {len(delta_all)} points")
-    print()
+    print(f'Starting parameter sweep over {total_combinations} combinations ({I_out} x {I_in})')
+    print(f'Delta range: [{delta_all[0]:.1f}, {delta_all[-1]:.1f}] dB with {delta_all[1]-delta_all[0]:.1f} dB steps')
 
+    # Fixed number of targets for this analysis
+    m_target = 2
     M = m_target
-    channel = ((k_par - 1) % I_out) + 1  # Convert to 1-based indexing
-    weight = ((k_par - 1) // I_out) + 1  # Convert to 1-based indexing
 
-    print(f"Channel: {channel}, Weight: {weight}")
-
-    delta_s = config.delta_s
-    # NOTE:
-    # delta_c is declared differently in figure 1
-    # delta_c = lin[de]
-    delta_c = 10**(delta_all[weight - 1])  # Convert to 0-based indexing
-
-    print(f"delta_s: {delta_s}, delta_c: {delta_c:.6e}")
-    print()
-
-    # Initialize random number generator with fixed seed for reproducibility
-    # TODO: use twister instead
-    # numpy uses PCG64 as default
-    # NOTE: figure 1 set seed with value of channel
+    # Generate all random parameters once at the beginning for consistency
     rng = np.random.default_rng(1)
-
-    # Generate random parameters
     alpha_all = config.alpha_base * (1 + config.alpha_variance * rng.standard_normal(M_max)) * \
         np.exp(1j * 2 * np.pi * rng.random(M_max))
 
-    # NOTE:
-    # cannot use config.generate_target_angles
-    # theta_all, phi_all = config.generate_target_angles(rng)
-    # because this figure use rng.random(M_max)
     theta_range = config.theta_range
     phi_range = config.phi_range
     theta_all = theta_range[0] + (theta_range[1] - theta_range[0]) * rng.random(M_max)
     phi_all = phi_range[0] + (phi_range[1] - phi_range[0]) * rng.random(M_max)
 
-    # Generate all channel realizations
-    # NOTE: H_all is different from MATLAB because of random
-    # NOTE: H_all is different from figure 1
-    # in figure 1, I_out is not used
     H_all = 1/np.sqrt(2) * (rng.standard_normal((I_out, Nt, K)) +
         1j * rng.standard_normal((I_out, Nt, K)))
-    # print(f"H_all: {H_all}")
 
-    # NOTE: actually, only one value of H is used
-    # Extract parameters for current scenario
-    H = H_all[channel - 1, :, :]  # Convert to 0-based indexing
-    # print(f"H: {H}")
+    # Extract target parameters
     alpha = alpha_all[:m_target]
     theta = theta_all[:m_target]
     phi = phi_all[:m_target]
@@ -198,213 +161,200 @@ def main():
     print(f"Target reflection coefficients (alpha): {alpha}")
     print()
 
-    # Start timing
-    start_time = perf_counter()
-
-    # Construct steering matrices
+    # Construct steering matrices (same for all scenarios)
     A, dAtheta, dAphi = construct_steer_matrix_and_derivative_steer_matrix(theta, phi, Nth, Ntv)
     B, dBtheta, dBphi = construct_steer_matrix_and_derivative_steer_matrix(theta, phi, Nrh, Nrv)
-
     U = np.diag(alpha)
 
-    # Initialize beamforming matrices
-    # Communication beamforming: random initialization
-    # TODO: Wc is different from MATLAB
-    Wc = rng.standard_normal((Nt, K)) + 1j * rng.standard_normal((Nt, K))
-    # print(f"Wc: {Wc}")
+    # Store convergence data for the last scenario (for plotting)
+    Con_last = []
 
-    # Sensing beamforming: random initialization
-    # TODO: Ws is different from MATLAB
-    Ws = rng.standard_normal((Nt, num_sensing_streams)) + 1j * rng.standard_normal((Nt, num_sensing_streams))
-    # print(f"Ws: {Ws}")
+    # Main parameter sweep loop
+    for k_par in range(1, total_combinations + 1):
+        
+        # Display progress
+        if (k_par - 1) % 100 == 0 or k_par == 1:
+            print(f'Processing combination {k_par}/{total_combinations} ({100*k_par/total_combinations:.1f}%)')
 
-    # Alternative initialization using initial_Ws (commented out as in MATLAB)
-    # Ws = initial_Ws(L, noise_s, Nt, num_sensing_streams, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
+        # Map linear index to 2D indices
+        channel = ((k_par - 1) % I_out) + 1
+        weight = ((k_par - 1) // I_out) + 1
 
-    # Combine communication and sensing beamforming
-    W = np.hstack([Wc, Ws])
+        # Set trade-off parameters
+        delta_s = config.delta_s
+        delta_c = 10**(delta_all[weight - 1])  # Convert to 0-based indexing
 
-    # Normalize to satisfy power constraint
-    W = W * np.sqrt(Pt / np.trace(W @ W.conj().T))
+        # Extract channel realization
+        H = H_all[channel - 1, :, :]  # Convert to 0-based indexing
 
-    # Initial FIM calculation
-    FIM = calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
-    W_last = W.copy()
-    # print(f'FIM: {FIM}')
+        # Start timing for this scenario
+        start_time = perf_counter()
 
-    # Convergence tracking
-    Con = []
+        # Initialize beamforming matrices with fresh random values for each scenario
+        rng_scenario = np.random.default_rng(k_par + 1000)  # Different seed for each scenario
+        Wc = rng_scenario.standard_normal((Nt, K)) + 1j * rng_scenario.standard_normal((Nt, K))
+        Ws = rng_scenario.standard_normal((Nt, num_sensing_streams)) + 1j * rng_scenario.standard_normal((Nt, num_sensing_streams))
 
-    print("Starting SCA iterations...")
-
-    # Main SCA iteration loop
-    for count in range(max_iterations):
-        # Update auxiliary variables for communication
-        T_k = np.sum(square_abs(H.conj().T @ W[:, :K]), axis=1) + noise_c * np.ones(K)
-        alpha_k = T_k / (T_k - square_abs(np.diag(H.conj().T @ W[:, :K]))) - 1
-        beta_k = np.sqrt(1 + alpha_k) * np.diag(H.conj().T @ W[:, :K]) / T_k
-
-        Sigma1 = np.diag(np.sqrt(1 + alpha_k) * beta_k)
-        Sigma2 = np.diag(square_abs(beta_k))
-
-        # Update FIM and construct matrix Q for sensing
-        CRBM = np.linalg.inv(FIM)
-        Q = construct_matrixQ(L, noise_s, CRBM @ CRBM, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
-
-        # Construct matrices C1 and C2 for SCA update
-        C1 = np.hstack([delta_c * H @ Sigma1, np.zeros((Nt, num_sensing_streams), dtype=complex)])
-
-        C2 = -0.5 * delta_s * (Q + Q.conj().T) + delta_c * H @ Sigma2 @ H.conj().T
-
-        # Fig2 uses Type B C2 construction (different from Fig1)
-        # Dominant eigenvalue calculation
-        # MATLAB
-        # mu=abs(eigs(H*Sigma2*H',1,'LM'));
-        mu = np.abs(eigs(H @ Sigma2 @ H.conj().T, k=1, which='LM', return_eigenvectors=False)[0])
-        C2 = delta_c * mu * np.eye(Nt) - C2
-
-        # SCA update step
-        W = C1 + C2 @ W
-
-        # Normalize to satisfy power constraint
+        # Combine and normalize beamforming matrices
+        W = np.hstack([Wc, Ws])
         W = W * np.sqrt(Pt / np.trace(W @ W.conj().T))
 
-        # Update FIM
+        # Initial FIM calculation
         FIM = calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
+        W_last = W.copy()
+        Con = []
 
-        # Calculate performance metrics
+        # SCA iteration loop
+        for count in range(max_iterations):
+            
+            # Update auxiliary variables for communication
+            T_k = np.sum(square_abs(H.conj().T @ W[:, :K]), axis=1) + noise_c * np.ones(K)
+            alpha_k = T_k / (T_k - square_abs(np.diag(H.conj().T @ W[:, :K]))) - 1
+            beta_k = np.sqrt(1 + alpha_k) * np.diag(H.conj().T @ W[:, :K]) / T_k
+
+            Sigma1 = np.diag(np.sqrt(1 + alpha_k) * beta_k)
+            Sigma2 = np.diag(square_abs(beta_k))
+
+            # Update FIM and construct matrix Q for sensing
+            CRBM = np.linalg.inv(FIM)
+            Q = construct_matrixQ(L, noise_s, CRBM @ CRBM, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
+
+            # Construct matrices C1 and C2 for SCA update
+            C1 = np.hstack([delta_c * H @ Sigma1, np.zeros((Nt, num_sensing_streams), dtype=complex)])
+            C2 = 0.5 * delta_s * (Q + Q.conj().T) - delta_c * H @ Sigma2 @ H.conj().T
+
+            # Dominant eigenvalue calculation (Type B construction)
+            mu = np.abs(eigs(H @ Sigma2 @ H.conj().T, k=1, which='LM', return_eigenvectors=False)[0])
+            C2 = delta_c * mu * np.eye(Nt) + C2
+
+            # SCA update step
+            W = C1 + C2 @ W
+            W = W * np.sqrt(Pt / np.trace(W @ W.conj().T))
+
+            # Update FIM
+            FIM = calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
+
+            # Calculate performance metrics for convergence tracking
+            T_k = np.sum(square_abs(H.conj().T @ W), axis=1) + noise_c * np.ones(K)
+            obj = delta_c * np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W))))) - \
+                delta_s * np.trace(np.linalg.inv(FIM))
+
+            # Store convergence data
+            sum_rate = np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W)))))
+            trace_inv_fim = -np.trace(np.linalg.inv(FIM))
+            Con.append([sum_rate, trace_inv_fim, obj])
+
+            # Check convergence
+            if np.linalg.norm(W - W_last) < tolerance:
+                break
+            else:
+                W_last = W.copy()
+
+        # Final calculations for this scenario
         T_k = np.sum(square_abs(H.conj().T @ W), axis=1) + noise_c * np.ones(K)
-        rate_p = np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W))))
+        SR = np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W)))))
+        CRB_trace = np.trace(np.linalg.inv(FIM))
+        computation_time = perf_counter() - start_time
 
-        # Total objective value
-        obj = delta_c * np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W))))) - \
-            delta_s * np.trace(np.linalg.inv(FIM))
+        # Store results in proper matrix locations
+        SR_all[channel - 1, weight - 1] = SR  # Convert to 0-based indexing
+        CRB_all[channel - 1, weight - 1] = CRB_trace
+        Time_all[channel - 1, weight - 1] = computation_time
 
-        # Store convergence data
-        sum_rate = np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W)))))
-        trace_inv_fim = -np.trace(np.linalg.inv(FIM))
+        # Store convergence data for the last scenario (for plotting)
+        if k_par == total_combinations:
+            Con_last = np.array(Con)
 
-        Con.append([sum_rate, trace_inv_fim, obj])
+    print('Parameter sweep completed!')
+    print(f'Average computation time per scenario: {np.mean(Time_all):.3f} seconds')
+    print(f'Total computation time: {np.sum(Time_all)/60:.1f} minutes')
 
-        # Check convergence
-        if np.linalg.norm(W - W_last) < tolerance:
-            print(f"Converged after {count + 1} iterations")
-            break
-        else:
-            W_last = W.copy()
-
-    else:
-        print(f"Reached maximum iterations ({max_iterations})")
-
-    # Convert convergence data to numpy array
-    Con = np.array(Con)
-
-    # Final calculations
-    Rx = W @ W.conj().T
-    FIM = calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
-    CRB = np.linalg.inv(FIM)
-    SR = np.sum(np.log(T_k / (T_k - square_abs(np.diag(H.conj().T @ W)))))
-
-    # Store final results - ensure real values for storage
-    # CRB_trace = np.real(np.trace(np.linalg.inv(FIM)))  # Extract real part to avoid complex warning
-    CRB_trace = np.trace(np.linalg.inv(FIM))
-    CRB_all[k_par - 1] = CRB_trace
-    SR_all[k_par - 1] = SR
-    computation_time = perf_counter() - start_time
-    Time_all[k_par - 1] = computation_time
-
-    # Print final results
-    print("\nFinal Results:")
-    print(f"Sum Rate (SR): {SR:.6f} nat/s/Hz")
-    print(f"Trace of inverse FIM (CRB): {CRB_trace:.6e}")  # Use scalar value for formatting
-    print(f"Final objective value: {np.real(Con[-1, 2]):.6f}")  # Extract real part for formatting
-    print(f"Computation time: {computation_time:.3f} seconds")  # Use scalar variable
-    print()
-
-    # Save results if requested
+    # Save results to file
     if args.save_data:
         output_dir = args.output_dir
 
-        # Save main results
-        results_dict = {
+        # Prepare all variables for saving (matching MATLAB approach)
+        save_dict = {
             'SR_all': SR_all,
             'CRB_all': CRB_all,
             'Time_all': Time_all,
-            'Con': Con,
-            'config': {
-                'delta_s': delta_s,
-                'delta_c': delta_c,
-                'delta_all': delta_all,
-                'K': K,
-                'M': M,
-                'Nt': Nt,
-                'Nr': Nr,
-                'L': L,
-                'tolerance': tolerance,
-                'max_iterations': max_iterations
-            }
+            'delta_all': delta_all,
+            'I_out': I_out,
+            'I_in': I_in,
+            'Nth': Nth,
+            'Ntv': Ntv,
+            'Nt': Nt,
+            'Nrh': Nrh,
+            'Nrv': Nrv,
+            'Nr': Nr,
+            'K': K,
+            'M': M,
+            'Pt': Pt,
+            'noise_c': noise_c,
+            'noise_s': noise_s,
+            'L': L,
+            'tolerance': tolerance
         }
 
         # Save to .mat file for MATLAB compatibility
-        sio.savemat(os.path.join(output_dir, 'data_proposed_SCA_python.mat'), results_dict)
+        sio.savemat(os.path.join(output_dir, 'data_proposed_SCA.mat'), save_dict)
+        print('Results saved to data_proposed_SCA.mat')
 
-        # Save to .npz file for Python
-        # np.savez(os.path.join(output_dir, 'data_proposed_SCA_python.npz'), **results_dict)
+    # Display summary statistics
+    print('\nSummary Statistics:')
+    print(f'Sum Rate - Min: {np.min(SR_all):.4f}, Max: {np.max(SR_all):.4f}, Mean: {np.mean(SR_all):.4f}')
+    print(f'CRB Trace - Min: {np.min(CRB_all):.4e}, Max: {np.max(CRB_all):.4e}, Mean: {np.mean(CRB_all):.4e}')
 
-        print(f"Results saved to {output_dir}/")
-        print("Files created:")
-        print("  - data_proposed_SCA_python.mat (MATLAB format)")
-        # print("  - data_proposed_SCA_python.npz (Python format)")
+    # Plot convergence for the last scenario
+    if len(Con_last) > 0:
+        try:
+            import matplotlib.pyplot as plt
 
-    # Optional: Quick visualization of convergence
-    try:
-        import matplotlib.pyplot as plt
+            plt.figure(1)
+            plt.plot(Con_last[:, 0], color='blue', linewidth=1.5)
+            plt.xlabel('Iteration')
+            plt.ylabel('Sum Rate (nat/s/Hz)')
+            plt.title('Sum Rate Convergence (Last Scenario)')
+            plt.grid(True)
 
-        plt.figure(1)
-        plt.plot(Con[:, 0], color='blue')
-        plt.xlabel('Iteration')
-        plt.ylabel('Sum Rate (nat/s/Hz)')
-        plt.title('Sum Rate Convergence')
-        plt.grid(True)
+            plt.figure(2)
+            plt.plot(Con_last[:, 1], color='red', linewidth=1.5)
+            plt.xlabel('Iteration')
+            plt.ylabel('Trace of inverse FIM')
+            plt.title('Sensing Performance Convergence (Last Scenario)')
+            plt.grid(True)
 
-        plt.figure(2)
-        plt.plot(Con[:, 1], color='red')
-        plt.xlabel('Iteration')
-        plt.ylabel('Trace of inverse FIM')
-        plt.title('Sensing Performance Convergence')
-        plt.grid(True)
+            plt.figure(3)
+            plt.plot(Con_last[:, 2], color='green', linewidth=1.5)
+            plt.xlabel('Iteration')
+            plt.ylabel('Total Objective Value')
+            plt.title('Objective Function Convergence (Last Scenario)')
+            plt.grid(True)
 
-        plt.figure(3)
-        plt.plot(Con[:, 2], color='green')
-        plt.xlabel('Iteration')
-        plt.ylabel('Total Objective Value')
-        plt.title('Objective Function Convergence')
-        plt.grid(True)
+            plt.tight_layout()
 
-        plt.tight_layout()
+            if args.save_plots:
+                # Save plots as files
+                plot_names = [
+                    'fig2_sum_rate_vs_iteration.png',
+                    'fig2_inverse_fim_trace_vs_iteration.png',
+                    'fig2_objective_value_vs_iteration.png'
+                ]
 
-        if args.save_plots:
-            # Save plots as files
-            plot_names = [
-                'fig2_sum_rate_vs_iteration.png',
-                'fig2_inverse_fim_trace_vs_iteration.png',
-                'fig2_objective_value_vs_iteration.png'
-            ]
+                for fig_num, plot_name in enumerate(plot_names, 1):
+                    plot_file = os.path.join(args.output_dir, plot_name)
+                    plt.figure(fig_num)
+                    plt.tight_layout()
+                    plt.savefig(plot_file, dpi=300, bbox_inches='tight')
+                    print(f"Plot {fig_num} saved to: {plot_file}")
+                plt.close('all')
+            else:
+                plt.show()
 
-            for fig_num, plot_name in enumerate(plot_names, 1):
-                plot_file = os.path.join(args.output_dir, plot_name)
-                plt.figure(fig_num)
-                plt.tight_layout()
-                plt.savefig(plot_file, dpi=300, bbox_inches='tight')
-                print(f"Plot {fig_num} saved to: {plot_file}")
-            plt.close('all')
-        else:
-            plt.show()
+        except ImportError:
+            print("Matplotlib not available. Skipping plots.")
 
-    except ImportError:
-        print("Matplotlib not available. Skipping plots.")
-
-    return SR_all, CRB_all, Time_all, Con
+    return SR_all, CRB_all, Time_all, Con_last
 
 
 if __name__ == "__main__":
