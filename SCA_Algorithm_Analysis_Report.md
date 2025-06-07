@@ -291,6 +291,218 @@ By implementing the remaining suggested refactoring:
 2. **Automated testing framework**: Ensures refactoring doesn't break functionality
 3. **Performance optimization**: Profile and optimize common bottlenecks
 
+## Algorithm Pseudo Code Specifications
+
+### 1. Standard SCA Algorithm (Type A & Type B)
+
+#### Standard SCA - Type A (Main, Fig1, SCA_sensing_only)
+```
+ALGORITHM: Standard_SCA_TypeA
+INPUT: System parameters (H, A, B, U, δ_c, δ_s, L, P_t, noise_c, noise_s)
+       Tolerance ε, max_iterations
+OUTPUT: Optimized beamforming matrix W, convergence data
+
+1. INITIALIZE:
+   W_c ← random(N_t, K) or channel-based initialization
+   W_s ← random(N_t, N_s) or initial_Ws()
+   W ← [W_c, W_s] * sqrt(P_t / trace(W*W'))
+   FIM ← calculateFIM(L, noise_s, W, A, dA_θ, dA_φ, B, dB_θ, dB_φ, U)
+   W_last ← W
+
+2. FOR count = 1 TO max_iterations:
+   a) UPDATE auxiliary variables:
+      T_k ← sum(|H'*W(:,1:K)|², 2) + noise_c * ones(K,1)
+      α_k ← T_k ./ (T_k - |diag(H'*W(:,1:K))|²) - 1
+      β_k ← sqrt(1 + α_k) .* diag(H'*W(:,1:K)) ./ T_k
+      Σ₁ ← diag(sqrt(1 + α_k) .* β_k)
+      Σ₂ ← diag(|β_k|²)
+
+   b) UPDATE FIM and construct Q matrix:
+      CRB_M ← inv(FIM)
+      Q ← construct_matrixQ(L, noise_s, CRB_M*CRB_M, A, dA_θ, dA_φ, B, dB_θ, dB_φ, U)
+
+   c) CONSTRUCT update matrices (Type A):
+      C₁ ← [δ_c*H*Σ₁, zeros(N_t, N_s)]
+      C₂ ← -0.5*δ_s*(Q + Q') + δ_c*H*Σ₂*H'
+      μ ← |eigs(C₂, 1, 'LM')|
+      C₂ ← μ*I_{N_t} - C₂
+
+   d) UPDATE beamforming matrix:
+      W ← C₁ + C₂*W
+      W ← W * sqrt(P_t / trace(W*W'))
+
+   e) UPDATE FIM:
+      FIM ← calculateFIM(L, noise_s, W, A, dA_θ, dA_φ, B, dB_θ, dB_φ, U)
+
+   f) CHECK convergence:
+      IF ||W - W_last|| < ε: BREAK
+      ELSE: W_last ← W
+
+3. RETURN W, FIM, convergence_data
+```
+
+#### Standard SCA - Type B (Fig2, Fig3, Fig4, Fig5, Fig6)
+```
+ALGORITHM: Standard_SCA_TypeB
+INPUT: Same as Type A
+OUTPUT: Same as Type A
+
+Steps 1, 2a, 2b, 2d, 2e, 2f: Same as Type A
+
+2c) CONSTRUCT update matrices (Type B):
+    C₁ ← [δ_c*H*Σ₁, zeros(N_t, N_s)]
+    C₂ ← 0.5*δ_s*(Q + Q') - δ_c*H*Σ₂*H'
+    μ ← |eigs(H*Σ₂*H', 1, 'LM')|
+    C₂ ← δ_c*μ*I_{N_t} + C₂
+
+RETURN W, FIM, convergence_data
+```
+
+### 2. SCA Sensing-Only Algorithm
+
+```
+ALGORITHM: SCA_Sensing_Only
+INPUT: System parameters with δ_c = 0 (no communication users)
+       W_s ← random(N_t, N_s), K = 0
+OUTPUT: Sensing-optimized beamforming matrix W_s
+
+1. INITIALIZE:
+   W ← [[], W_s] * sqrt(P_t / trace(W_s*W_s'))
+   FIM ← calculateFIM(L, noise_s, W, A, dA_θ, dA_φ, B, dB_θ, dB_φ, U)
+
+2. FOR count = 1 TO max_iterations:
+   a) SKIP communication auxiliary variables (K = 0)
+   
+   b) UPDATE FIM and construct Q matrix:
+      CRB_M ← inv(FIM)
+      Q ← construct_matrixQ(L, noise_s, CRB_M*CRB_M, A, dA_θ, dA_φ, B, dB_θ, dB_φ, U)
+
+   c) CONSTRUCT update matrices:
+      C₁ ← zeros(N_t, N_s)
+      C₂ ← -0.5*δ_s*(Q + Q')  # Type A construction
+      μ ← |eigs(C₂, 1, 'LM')|
+      C₂ ← μ*I_{N_t} - C₂
+
+   d) UPDATE sensing beamforming:
+      W ← C₁ + C₂*W
+      W ← W * sqrt(P_t / trace(W*W'))
+
+   e) UPDATE FIM and check convergence...
+
+3. RETURN W_s, FIM
+```
+
+### 3. Low-Dimensional SCA (LD-SCA)
+
+```
+ALGORITHM: LD_SCA
+INPUT: System parameters, reduced space basis RS
+OUTPUT: Optimized beamforming in reduced dimension
+
+1. INITIALIZE reduced-dimensional space:
+   RS ← [H, A, dA_θ, dA_φ]  # Reduced space basis
+   RS_p ← pinv(RS)           # Pseudo-inverse
+   RS_co ← RS' * RS          # Covariance matrix
+   
+   # Transform system to reduced space:
+   H_e ← RS' * H
+   A_e ← RS' * A
+   dA_θ_e ← RS' * dA_θ
+   dA_φ_e ← RS' * dA_φ
+
+2. INITIALIZE beamforming in reduced space:
+   W_c ← δ_c * H ./ vecnorm(H)
+   W_s ← random(N_t, N_s)
+   W ← [W_c, δ_s * W_s] * sqrt(P_t / trace(W*W'))
+   P ← RS_p * W              # Project to reduced space
+   
+3. FOR count = 1 TO max_iterations:
+   a) UPDATE auxiliary variables in reduced space:
+      T_k ← sum(|H_e'*P(:,1:K)|², 2) + noise_c * ones(K,1)
+      α_k ← T_k ./ (T_k - |diag(H_e'*P(:,1:K))|²) - 1
+      β_k ← sqrt(1 + α_k) .* diag(H_e'*P(:,1:K)) ./ T_k
+      Σ₁ ← diag(sqrt(1 + α_k) .* β_k)
+      Σ₂ ← diag(|β_k|²)
+
+   b) UPDATE FIM in reduced space:
+      FIM ← calculateFIM(L, noise_s, P*P', A_e, dA_θ_e, dA_φ_e, B, dB_θ, dB_φ, U)
+      CRB_M ← inv(FIM)
+      Q ← construct_matrixQ(L, noise_s, CRB_M*CRB_M, A_e, dA_θ_e, dA_φ_e, B, dB_θ, dB_φ, U)
+
+   c) CONSTRUCT update matrices in reduced space:
+      C₁ ← [δ_c*H_e*Σ₁, zeros(size(RS,2), N_s)]
+      C₂ ← 0.5*δ_s*(Q + Q') - δ_c*H_e*Σ₂*H_e'
+      μ ← |eigs(H_e*Σ₂*H_e', 1, 'LM')|
+      C₂ ← δ_c*μ*RS_co + C₂
+
+   d) UPDATE in reduced space with multiple iterations:
+      FOR iter = 1 TO 20:
+         Linear ← C₁ + C₂*P
+         P ← RS_co \ Linear
+         P ← projection_ellipsoid(RS, RS_p, P, P_t)
+
+   e) CHECK convergence in original space:
+      IF ||RS*P - RS*P_last|| < ε: BREAK
+
+4. TRANSFORM back to original space:
+   W ← RS * P
+
+5. RETURN W, FIM
+```
+
+### 4. Initial Sensing Beamforming Algorithm
+
+```
+ALGORITHM: initial_Ws
+INPUT: L, noise_s, N_t, N_s, A, dA_θ, dA_φ, B, dB_θ, dB_φ, U
+OUTPUT: Initial sensing beamforming matrix W_s
+
+1. INITIALIZE:
+   W_s ← random(N_t, N_s) + j*random(N_t, N_s)
+
+2. FOR iter = 1 TO 5:
+   a) FIM ← calculateFIM(L, noise_s, W_s, A, dA_θ, dA_φ, B, dB_θ, dB_φ, U)
+   b) CRB_M ← inv(FIM)
+   c) Q ← construct_matrixQ(L, noise_s, CRB_M*CRB_M, A, dA_θ, dA_φ, B, dB_θ, dB_φ, U)
+   d) W_s ← (Q + Q') * W_s
+   e) W_s ← W_s * sqrt(1 / trace(W_s*W_s'))
+
+3. RETURN W_s
+```
+
+### 5. Power Projection for LD-SCA
+
+```
+ALGORITHM: projection_ellipsoid
+INPUT: Basis matrix A, pseudo-inverse A_p, beamforming X₀, power constraint P_t
+OUTPUT: Power-constrained beamforming X
+
+1. W ← A * X₀                          # Transform to full space
+2. W ← W * sqrt(P_t / trace(W*W'))     # Apply power constraint
+3. X ← A_p * W                         # Project back to reduced space
+4. RETURN X
+```
+
+## Key Algorithmic Differences Summary
+
+### C₂ Matrix Construction Variants:
+- **Type A**: `C₂ = μ*I - (-0.5*δ_s*(Q+Q') + δ_c*H*Σ₂*H')` where `μ = |eigs(C₂, 1, 'LM')|`
+- **Type B**: `C₂ = δ_c*μ*I + (0.5*δ_s*(Q+Q') - δ_c*H*Σ₂*H')` where `μ = |eigs(H*Σ₂*H', 1, 'LM')|`
+
+### Initialization Strategies:
+- **Random**: `W_c = randn(N_t, K) + j*randn(N_t, K)`
+- **Channel-based**: `W_c = δ_c * H ./ vecnorm(H)`
+- **Optimized sensing**: Using `initial_Ws()` algorithm
+
+### Convergence Tolerances:
+- **High precision**: `1e-5` (Fig1, Fig4, Fig5, Fig6)
+- **Medium precision**: `1e-4` (Fig2, Fig3)
+
+### LD-SCA Specific Features:
+- **Reduced-dimensional optimization**: Projects full problem to smaller subspace
+- **Multiple update iterations**: 20 iterations per SCA step vs. 1 for standard
+- **Power projection**: Explicit power constraint handling in reduced space
+
 ## Conclusion
 
 The analysis reveals significant code duplication across SCA implementations, primarily in:
