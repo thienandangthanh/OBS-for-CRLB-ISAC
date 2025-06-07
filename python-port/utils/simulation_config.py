@@ -387,6 +387,8 @@ class SimulationConfig:
             # Performance vs Nt (antennas)
             new_config.tolerance = 1e-5
             new_config.max_iterations = 4000
+            new_config.I_in = 5
+            new_config.I_out = 100
 
         elif scenario.lower() == 'fig5':
             # Performance vs K (users)

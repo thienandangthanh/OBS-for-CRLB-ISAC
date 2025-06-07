@@ -93,28 +93,23 @@ def main():
 
     # Extract configuration parameters
     # System configuration - Fig4 specific values
-    # K = config.K
-    # M = config.M
-    K = 4  # Fixed number of users
-    M = 2  # Fixed number of targets
+    K = config.K
+    M = config.M
 
     # Algorithm configuration
-    # tolerance = config.tolerance
-    # max_iterations = config.max_iterations
-    tolerance = 1e-5  # Tighter tolerance for Fig4
-    max_iterations = 4000  # More iterations for Fig4
+    tolerance = config.tolerance
+    max_iterations = config.max_iterations
 
     # Power and noise configuration
-    Pt = db2pow(10-30)  # dBm
-    noise_c = db2pow(0-30)  # dBm
-    noise_s = db2pow(0-30)  # dBm
-    L = 30
-    kappa = 2*L/noise_s
+    Pt = config.Pt
+    noise_c = config.noise_c
+    noise_s = config.noise_s
+    L = config.L
+    kappa = config.kappa
 
     # Sweep configuration
-    I_in = 5  # 5 antenna configurations
-    # I_out = config.I_out  # Number of channel realizations
-    I_out = 100  # Number of channel realizations
+    I_in = config.I_in  # Number of antenna configurations
+    I_out = config.I_out  # Number of channel realizations
 
     # Initialize result storage
     SR_all = np.zeros((I_out, I_in))
@@ -154,11 +149,9 @@ def main():
 
         # Generate random parameters (same seed for consistency)
         rng = np.random.default_rng(1)
-        alpha = 0.1 * (1 + 0.2 * rng.standard_normal(M)) * \
-            np.exp(1j * 2 * np.pi * rng.random(M))
+        alpha = config.generate_alpha(rng)
 
-        theta = -np.pi/3 + 2*np.pi/3 * rng.random(M)
-        phi = -np.pi/3 + 2*np.pi/3 * rng.random(M)
+        theta, phi = config.generate_target_angles(rng)
 
         # Channel matrix generation: (I_out, Nt, K)
         H_all = 1/np.sqrt(2) * (rng.standard_normal((I_out, Nt, K)) +
