@@ -107,6 +107,10 @@ def main():
     L = config.L
     kappa = config.kappa
 
+    # Set trade-off parameters (fixed for Figure 4)
+    delta_s = config.delta_s
+    delta_c = config.delta_c
+
     # Sweep configuration
     I_in = config.I_in  # Number of antenna configurations
     I_out = config.I_out  # Number of channel realizations
@@ -128,10 +132,6 @@ def main():
         weight = ((k_par - 1) // I_out) + 1
 
         print(f'Processing: channel={channel}, weight={weight} (Antenna config {weight}/5)')
-
-        # Set trade-off parameters (fixed for Figure 4)
-        delta_s = 1
-        delta_c = 0.25
 
         # Variable antenna configuration based on weight
         # weight = 1,2,3,4,5 corresponds to Nt = 8,16,32,64,128
@@ -281,8 +281,8 @@ def main():
             'noise_s': noise_s,
             'L': L,
             'tolerance': tolerance,
-            'delta_s': 1,
-            'delta_c': 0.25,
+            'delta_s': delta_s,
+            'delta_c': delta_c,
             'num_sensing_streams': num_sensing_streams
         }
 
