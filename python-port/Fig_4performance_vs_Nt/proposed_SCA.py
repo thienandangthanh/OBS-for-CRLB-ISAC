@@ -157,8 +157,8 @@ def main():
         H_all = 1/np.sqrt(2) * (rng.standard_normal((I_out, Nt, K)) +
             1j * rng.standard_normal((I_out, Nt, K)))
 
-        # Extract channel realization
-        H = H_all[channel-1, :, :]  # Extract specific channel realization
+        # Extract specific channel realization
+        H = np.squeeze(H_all[channel-1, :, :])
 
         # Start timing for this scenario
         start_time = perf_counter()
@@ -175,9 +175,8 @@ def main():
         Wc = delta_c * H / H_norms
 
         # Random sensing beamforming initialization
-        rng_scenario = np.random.default_rng(k_par + 1000)
-        Ws = rng_scenario.standard_normal((Nt, num_sensing_streams)) + \
-            1j * rng_scenario.standard_normal((Nt, num_sensing_streams))
+        Ws = rng.standard_normal((Nt, num_sensing_streams)) + \
+            1j * rng.standard_normal((Nt, num_sensing_streams))
 
         # Combine beamforming matrices
         W = np.hstack([Wc, Ws])
@@ -247,6 +246,7 @@ def main():
         computation_time = perf_counter() - start_time
 
         # Store results
+        # NOTE: why [channel-1, weight-1] is used instead of [k_par]?
         CRB_all[channel-1, weight-1] = np.real(np.trace(np.linalg.inv(FIM)))
         SR_all[channel-1, weight-1] = SR
         Time_all[channel-1, weight-1] = computation_time
@@ -332,7 +332,7 @@ def main():
 
             # Plot 4: Performance vs number of antennas
             plt.figure(4, figsize=(10, 6))
-            
+
             # Calculate mean performance for each antenna configuration
             mean_obj = np.mean(Obj_all, axis=0)
             mean_sr = np.mean(SR_all, axis=0)
