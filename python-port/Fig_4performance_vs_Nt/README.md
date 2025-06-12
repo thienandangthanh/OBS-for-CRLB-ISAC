@@ -88,7 +88,7 @@ Run `python proposed_SCA.py --help` for complete options.
 ## Output Files
 
 ### Data Files
-- `data_proposed_SCA_fig4.mat`: Complete results including:
+- `data_SCA_Ns=3M.mat`: Complete results including:
   - SR_all: Sum rate values
   - CRB_all: CRB trace values  
   - Time_all: Computation times
