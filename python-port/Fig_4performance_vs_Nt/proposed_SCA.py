@@ -246,7 +246,7 @@ def main():
         computation_time = perf_counter() - start_time
 
         # Store results
-        # NOTE: why [channel-1, weight-1] is used instead of [k_par]?
+        # Use 2D indexing [channel-1, weight-1] because Python requires explicit 2D coordinates for 2D arrays (unlike MATLAB's linear indexing)
         CRB_all[channel-1, weight-1] = np.real(np.trace(np.linalg.inv(FIM)))
         SR_all[channel-1, weight-1] = SR
         Time_all[channel-1, weight-1] = computation_time
