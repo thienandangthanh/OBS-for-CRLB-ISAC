@@ -150,8 +150,9 @@ Typical execution times (vary with antenna array size):
 - Quick test (10 realizations): ~3-6 minutes
 - Per scenario: ~0.05-0.5 seconds (scales with antenna array size)
 
-**⚠️ Performance Warning**: The current Python implementation has significant performance issues:
-- **Actual runtime**: 18 hours, 7 minutes for full execution
+**⚠️ Performance Warning**: The current Python implementation has performance issues:
+See the [execution time screenshot](./proposed_SCA_python_runtime-1h18m.png) demonstrating the performance bottleneck.
+- **Actual runtime**: 1 hour, 18 minutes for full execution
 - **Performance gap**: Extremely slow compared to original MATLAB version
 - **Status**: Further investigation and optimization should be made
 
