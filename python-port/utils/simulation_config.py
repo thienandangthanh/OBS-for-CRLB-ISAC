@@ -400,6 +400,8 @@ class SimulationConfig:
             new_config.delta_s = 0.0  # Communication only
             new_config.tolerance = 1e-5
             new_config.max_iterations = 4000
+            new_config.I_in = 6
+            new_config.I_out = 100
 
         return new_config
 
