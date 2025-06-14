@@ -394,6 +394,8 @@ class SimulationConfig:
             # Performance vs K (users)
             new_config.tolerance = 1e-5
             new_config.max_iterations = 4000
+            new_config.I_in = 6
+            new_config.I_out = 100
 
         elif scenario.lower() == 'fig6':
             # Performance vs Pt (power)
