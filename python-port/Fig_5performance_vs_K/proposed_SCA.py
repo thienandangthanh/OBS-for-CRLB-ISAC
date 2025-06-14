@@ -126,7 +126,6 @@ def main():
     total_combinations = I_out * I_in
 
     print(f'Starting parameter sweep over {total_combinations} combinations ({I_out} x {I_in})')
-    # NOTE: where is this range defined?
     print(f'K range: 2, 4, 6, 8, 10, 12 users')
     print(f'Number of targets: {M}')
     print(f'Transmit antennas: {Nt} ({Nth}x{Ntv})')
@@ -187,12 +186,10 @@ def main():
         # Start timing for this scenario
         start_time = perf_counter()
 
-        # TODO: verify this
-        # Initialize communication beamforming matrix
-        # Wc = delta_c * H / ||H||_F for each column (following MATLAB)
+        # Initialize beamforming matrices
+        # Communication beamforming: delta_c*H./vecnorm(H)
         H_norms = np.linalg.norm(H, axis=0)
-        H_norms[H_norms == 0] = 1  # Avoid division by zero
-        Wc = delta_c * H / H_norms[np.newaxis, :]
+        Wc = delta_c * H / H_norms
 
         # Initialize sensing beamforming matrix with random values
         # Ws = np.random.randn(Nt, num_sensing_streams) + 1j * np.random.randn(Nt, num_sensing_streams)
@@ -237,10 +234,8 @@ def main():
             C1 = np.hstack([delta_c * H @ Sigma1, np.zeros((Nt, num_sensing_streams))])
             C2 = 0.5 * delta_s * (Q + Q.conj().T) - delta_c * H @ Sigma2 @ H.conj().T
 
-            # TODO: compare this expression with other figure
-            # Calculate dominant eigenvalue for regularization
-            eigenvals, _ = eigs(H @ Sigma2 @ H.conj().T, k=1, which='LM')
-            mu = np.abs(eigenvals[0])
+            # Dominant eigenvalue calculation (Type B construction)
+            mu = np.abs(eigs(H @ Sigma2 @ H.conj().T, k=1, which='LM', return_eigenvectors=False)[0])
             C2 = delta_c * mu * np.eye(Nt) + C2
 
             # SCA update step (single iteration as in MATLAB)
@@ -256,17 +251,14 @@ def main():
             T_k = np.sum(square_abs(H.conj().T @ W), axis=1) + noise_c * np.ones(K)
             H_W_comm = H.conj().T @ W[:, :K]
 
-            # TODO: compare this expression with other figure
             rate_p = np.log(T_k / (T_k - square_abs(np.diag(H_W_comm))))
-            obj = delta_c * np.sum(np.log(T_k / (T_k - square_abs(np.diag(H_W_comm))))) - delta_s * np.trace(np.linalg.inv(FIM))
+            sum_rate = np.sum(rate_p)
+            trace_inv_fim = np.real(np.trace(np.linalg.inv(FIM)))
+            obj = delta_c * sum_rate - delta_s * trace_inv_fim
 
-            # TODO: compare this expression with other figure
             # Store convergence data
-            Con.append([
-                np.sum(np.log(T_k / (T_k - square_abs(np.diag(H_W_comm))))),
-                -np.trace(np.linalg.inv(FIM)),
-                obj
-            ])
+            trace_inv_fim_neg = -trace_inv_fim
+            Con.append([sum_rate, trace_inv_fim_neg, obj])
 
             # Check convergence
             if np.linalg.norm(W - W_last) < tolerance:
@@ -285,12 +277,12 @@ def main():
         CRB = np.linalg.inv(FIM)
 
         # Final sum rate calculation
-        # TODO: why T_k is recalculated here?
         T_k = np.sum(square_abs(H.conj().T @ W), axis=1) + noise_c * np.ones(K)
         H_W_comm = H.conj().T @ W[:, :K]
         SR = np.sum(np.log(T_k / (T_k - square_abs(np.diag(H_W_comm)))))
 
-        # Store results (convert to 0-based indexing)
+        # Store results
+        # Use 2D indexing [channel-1, weight-1] because Python requires explicit 2D coordinates for 2D arrays (unlike MATLAB's linear indexing)
         CRB_all[channel-1, weight-1] = np.real(np.trace(np.linalg.inv(FIM)))
         SR_all[channel-1, weight-1] = SR
         Time_all[channel-1, weight-1] = end_time - start_time
