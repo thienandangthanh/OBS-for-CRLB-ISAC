@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import linalg
 from scipy.io import savemat
 from scipy.sparse.linalg import eigs
 import matplotlib.pyplot as plt
@@ -12,7 +11,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.steering_matrix import construct_steer_matrix_and_derivative_steer_matrix
 from utils.calculate_fim import calculateFIM
 from utils.construct_matrixQ import construct_matrixQ
-from utils.db2pow import db2pow
 from utils.square_abs import square_abs
 from utils.simulation_config import SimulationConfig
 
@@ -61,11 +59,18 @@ def main():
 
     Nrh = config.Nrh
     Nrv = config.Nrv
-    Nr = config.Nr
+    # NOTE:
+    # Nr is not used
+    # Nr = config.Nr
 
-    channel_number = config.channel_number
+    # NOTE:
+    # channel_number is not used
+    # channel_number = config.channel_number
     K = config.K
-    M = config.M
+    # NOTE:
+    # No need to set M here
+    # Because it's used internally in config.generate_target_angles
+    # M = config.M
 
     num_sensing_streams = config.num_sensing_streams
     tolerance = config.tolerance
@@ -79,7 +84,9 @@ def main():
     noise_s = config.noise_s
 
     L = config.L
-    kappa = config.kappa
+    # NOTE:
+    # kappa is not used
+    # kappa = config.kappa
 
     # Initialize random number generator
     rng = np.random.default_rng(config.random_seed)
@@ -88,6 +95,8 @@ def main():
     theta, phi = config.generate_target_angles(rng)
 
     delta_all = config.get_delta_range()
+    # NOTE:
+    # Per_all is not used
     Per_all = np.zeros((2, len(delta_all)))
     Con = [[], [], []]
 
@@ -143,6 +152,7 @@ def main():
                 W = W * np.sqrt(Pt / np.trace(W @ W.conj().T))
 
                 FIM = calculateFIM(L, noise_s, W, A, dAtheta, dAphi, B, dBtheta, dBphi, U)
+                print(f'FIM: {FIM}')
 
                 # TODO: Why axis=1
                 T_k = np.sum(square_abs(H.conj().T @ W), axis=1) + noise_c * np.ones(K)
