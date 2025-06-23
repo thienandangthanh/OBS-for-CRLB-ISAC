@@ -84,13 +84,6 @@ cd Fig2_trade_off_region
 python plotfigure2_tradeoff_region.py
 ```
 
-## Dependencies
-
-The project uses the following Python packages:
-- **scipy**: For loading MATLAB `.mat` files and scientific computing
-- **matplotlib**: For creating publication-quality plots and visualizations
-- **numpy**: For numerical array operations and linear algebra
-
 ## Data Files
 
 The Python scripts use the same `.mat` data files as the original MATLAB code. These files contain pre-computed simulation results and should be copied from the corresponding MATLAB directories:
@@ -103,11 +96,11 @@ The Python scripts use the same `.mat` data files as the original MATLAB code. T
 ## Translation Status
 
 - ✅ **Figure 1 (Convergence)**: Complete
-- ⏳ **Figure 2 (Trade-off Region)**: In progress
-- ⏳ **Figure 3 (Performance vs Ns)**: Planned
-- ⏳ **Figure 4 (Performance vs Nt)**: Planned
-- ⏳ **Figure 5 (Performance vs K)**: Planned
-- ⏳ **Figure 6 (Performance vs Pt)**: Planned
+- ✅ **Figure 2 (Trade-off Region)**: Complete
+- ✅ **Figure 3 (Performance vs Ns)**: Complete
+- ✅ **Figure 4 (Performance vs Nt)**: Complete
+- ✅ **Figure 5 (Performance vs K)**: Complete
+- ✅ **Figure 6 (Performance vs Pt)**: Complete
 
 ## Deactivating the Virtual Environment
 
@@ -139,12 +132,3 @@ ArXiv: https://arxiv.org/pdf/2503.09489
 - Ensure all required `.mat` files are present
 - Verify that the virtual environment is activated before running scripts
 - Use the debugging output in scripts to inspect data structures if needed
-
-## Contributing
-
-If you're translating additional figures from MATLAB to Python:
-
-1. Follow the existing directory structure (`Fig*_*/`)
-2. Copy the corresponding `.mat` data files
-3. Use similar imports and styling conventions as existing scripts
-4. Update this README with the translation status
