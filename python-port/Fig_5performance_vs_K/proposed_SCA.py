@@ -26,7 +26,6 @@ from utils import (
     calculateFIM,
     construct_matrixQ,
     SimulationConfig,
-    db2pow,
     square_abs
 )
 
@@ -83,38 +82,40 @@ def main():
 
     # Initialize configuration from arguments
     config = SimulationConfig.from_args(args)
+    config = config.get_scenario_config('fig5')
 
     print("Figure 5 Performance vs K Analysis")
     print("=" * 50)
+    print(config)
     print()
 
     # System parameters from MATLAB code
-    M = 2  # number of targets
-    K_max = 12  # maximum number of users
+    M = config.M  # number of targets
+    K_max = config.K_max  # maximum number of users
 
     # Antenna configuration
-    Nth = 4  # transmit horizontal antennas
-    Ntv = 4  # transmit vertical antennas
-    Nt = Nth * Ntv  # total transmit antennas
+    Nth = config.Nth  # transmit horizontal antennas
+    Ntv = config.Ntv  # transmit vertical antennas
+    Nt = config.Nt    # total transmit antennas
 
-    Nrh = 5  # receive horizontal antennas
-    Nrv = 4  # receive vertical antennas
-    Nr = Nrh * Nrv  # total receive antennas
+    Nrh = config.Nrh  # receive horizontal antennas
+    Nrv = config.Nrv  # receive vertical antennas
+    Nr = config.Nr # total receive antennas
 
     # Power and noise configuration
-    Pt = db2pow(10 - 30)  # transmit power in linear scale (dBm to W)
-    noise_c = db2pow(0 - 30)  # communication noise power
-    noise_s = db2pow(0 - 30)  # sensing noise power
-    L = 30  # number of sensing snapshots
-    kappa = 2 * L / noise_s
+    Pt = config.Pt  # transmit power in linear scale (dBm to W)
+    noise_c = config.noise_c  # communication noise power
+    noise_s = config.noise_s  # sensing noise power
+    L = config.L  # number of sensing snapshots
+    kappa = config.kappa
 
     # Algorithm parameters
-    tolerance = 1e-5
-    max_iterations = 4000
+    tolerance = config.tolerance
+    max_iterations = config.max_iterations
 
     # Simulation parameters
-    I_in = 6  # inner loop iterations (K parameter sweep)
-    I_out = 100  # outer loop iterations (channel realizations)
+    I_in = config.I_in  # inner loop iterations (K parameter sweep)
+    I_out = config.I_out  # outer loop iterations (channel realizations)
 
     # Initialize result storage
     SR_all = np.zeros((I_out, I_in))
@@ -127,9 +128,6 @@ def main():
 
     print(f'Starting parameter sweep over {total_combinations} combinations ({I_out} x {I_in})')
     print(f'K range: 2, 4, 6, 8, 10, 12 users')
-    print(f'Number of targets: {M}')
-    print(f'Transmit antennas: {Nt} ({Nth}x{Ntv})')
-    print(f'Receive antennas: {Nr} ({Nrh}x{Nrv})')
     print()
 
     # Fixed trade-off parameters
@@ -137,7 +135,7 @@ def main():
     delta_c = config.delta_c
 
     # Number of sensing streams equals number of transmit antennas
-    num_sensing_streams = Nt
+    num_sensing_streams = config.num_sensing_streams
 
     # Set random seed for reproducibility
     rng = np.random.default_rng(1)
