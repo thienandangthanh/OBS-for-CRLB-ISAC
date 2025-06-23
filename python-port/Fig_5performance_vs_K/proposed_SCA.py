@@ -288,6 +288,7 @@ def main():
 
     # Save results to file
     if args.save_data:
+        os.makedirs(args.output_dir, exist_ok=True)
         output_file = os.path.join(args.output_dir, 'data_SCA_Ns=3M.mat')
         sio.savemat(output_file, {
             'SR_all': SR_all,
